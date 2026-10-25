@@ -1,0 +1,6 @@
+{
+  "name": "FrameForge GFX",
+  "description": "Professional native Android gaming performance engine, GyroBoost, display refresh rate diagnostics, graphics profiles, and safe reversible optimizations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
