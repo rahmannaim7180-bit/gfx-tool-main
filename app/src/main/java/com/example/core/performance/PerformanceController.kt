@@ -18,10 +18,10 @@ class PerformanceController(
 ) {
     private val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
 
-    private val _currentMode = MutableStateFlow(PerformanceMode.SUSTAINED_COMPETITIVE)
+    private val _currentMode = MutableStateFlow(PerformanceMode.RAW_PERFORMANCE)
     val currentMode: StateFlow<PerformanceMode> = _currentMode.asStateFlow()
 
-    private val _rawPerformanceState = MutableStateFlow(RawPerformanceState())
+    private val _rawPerformanceState = MutableStateFlow(RawPerformanceState(isEnabled = true, currentMode = PerformanceMode.RAW_PERFORMANCE))
     val rawPerformanceState: StateFlow<RawPerformanceState> = _rawPerformanceState.asStateFlow()
 
     private val _thermalRecoveryReason = MutableStateFlow<String?>(null)

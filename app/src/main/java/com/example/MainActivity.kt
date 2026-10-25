@@ -34,7 +34,11 @@ enum class AppScreen {
     GAME_SESSION,
     NETWORK_QUALITY,
     COMPATIBILITY_DATABASE,
-    DEVICE_COMPARISON,
+    DEVICE_CAPABILITIES,
+    TOUCH_RESPONSE_LAB,
+    GAMEPLAY_RESPONSIVENESS,
+    POST_MATCH_REPORT,
+    SELF_AUDIT,
     SETTINGS
 }
 
@@ -57,7 +61,6 @@ class MainActivity : ComponentActivity() {
 fun MainAppNavHost(viewModel: MainViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var currentScreen by remember { mutableStateOf(AppScreen.HOME) }
-    var comparisonRecordTarget by remember { mutableStateOf<com.example.data.model.DeviceCompatibilityRecord?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.snackbarMessage) {
@@ -214,17 +217,25 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         onNavigateToPerformanceEngine = { currentScreen = AppScreen.PERFORMANCE_ENGINE },
                         onNavigateToGameSession = { currentScreen = AppScreen.GAME_SESSION },
                         onStartGameSession = { viewModel.startGameSession() },
-                        onStopGameSession = { viewModel.stopGameSession() },
+                        onStopGameSession = {
+                            viewModel.stopGameSession()
+                            viewModel.endCurrentGameSession()
+                            currentScreen = AppScreen.POST_MATCH_REPORT
+                        },
                         onSelectGame = { viewModel.selectGame(it) },
                         onNavigateToNetworkQuality = { currentScreen = AppScreen.NETWORK_QUALITY },
                         onNavigateToCompatibility = { currentScreen = AppScreen.COMPATIBILITY_DATABASE },
-                        onNavigateToDeviceComparison = {
-                            comparisonRecordTarget = null
-                            currentScreen = AppScreen.DEVICE_COMPARISON
-                        },
+                        onNavigateToDeviceCapabilities = { currentScreen = AppScreen.DEVICE_CAPABILITIES },
                         onNavigateToFramePacing = {
                             viewModel.evaluateFramePacing()
                             currentScreen = AppScreen.FRAME_PACING
+                        },
+                        onNavigateToTouchLab = { currentScreen = AppScreen.TOUCH_RESPONSE_LAB },
+                        onNavigateToGameplayLab = { currentScreen = AppScreen.GAMEPLAY_RESPONSIVENESS },
+                        onNavigateToSelfAudit = { currentScreen = AppScreen.SELF_AUDIT },
+                        onEvaluate8v8Readiness = { viewModel.evaluate8v8MatchReadiness() },
+                        onLaunchZeroOverheadGame = { game, profile ->
+                            viewModel.launchGameSession(game, profile)
                         }
                     )
                 }
@@ -295,15 +306,16 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                 }
 
                 AppScreen.GYRO_BOOST -> {
-                    GyroBoostScreen(
-                        uiState = uiState,
+                    GyroResponseLabScreen(
+                        specs = uiState.gyroSpecs,
+                        telemetry = uiState.gyroTelemetry,
                         onBack = { currentScreen = AppScreen.HOME },
-                        onToggleGyro = { viewModel.toggleGyroBoost(it) },
-                        onSensitivityChanged = { x, y -> viewModel.updateGyroSensitivity(x, y) },
-                        onModeChanged = { viewModel.setGyroMode(it) },
-                        onRunTest = { viewModel.runGyroTest() },
-                        onCalibrateZeroBias = { viewModel.calibrateGyroZeroBias() },
-                        guidedSensitivities = viewModel.getGuidedSensitivities()
+                        onStartTesting = { viewModel.startGyroLab() },
+                        onStopTesting = { viewModel.stopGyroLab() },
+                        onSelectProfile = { viewModel.selectGyroProfile(it) },
+                        onStartStationaryCalibration = { viewModel.startStationaryGyroCalibration() },
+                        onStartRotationTest = { viewModel.startRotationGyroTest() },
+                        onResetCalibration = { viewModel.resetGyroCalibration() }
                     )
                 }
 
@@ -340,7 +352,8 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         onBack = { currentScreen = AppScreen.HOME },
                         onEndSession = {
                             viewModel.stopGameSession()
-                            currentScreen = AppScreen.HOME
+                            viewModel.endCurrentGameSession()
+                            currentScreen = AppScreen.POST_MATCH_REPORT
                         }
                     )
                 }
@@ -356,17 +369,55 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                 AppScreen.COMPATIBILITY_DATABASE -> {
                     CompatibilityDatabaseScreen(
                         onBack = { currentScreen = AppScreen.HOME },
-                        onCompareWithDevice = { record ->
-                            comparisonRecordTarget = record
-                            currentScreen = AppScreen.DEVICE_COMPARISON
+                        onCompareWithDevice = { _ ->
+                            currentScreen = AppScreen.DEVICE_CAPABILITIES
                         }
                     )
                 }
 
-                AppScreen.DEVICE_COMPARISON -> {
-                    DeviceComparisonScreen(
-                        currentDevice = uiState.deviceSummary,
-                        initialComparisonRecord = comparisonRecordTarget,
+                AppScreen.DEVICE_CAPABILITIES -> {
+                    DeviceCapabilitiesScreen(
+                        deviceSummary = uiState.deviceSummary,
+                        capabilities = uiState.capabilityRegistry,
+                        onBack = { currentScreen = AppScreen.HOME }
+                    )
+                }
+
+                AppScreen.TOUCH_RESPONSE_LAB -> {
+                    TouchResponseLabScreen(
+                        metrics = uiState.touchMetrics,
+                        onRecordTouchEvent = { viewModel.recordTouchEvent(it) },
+                        onReset = { viewModel.resetTouchMetrics() },
+                        onBack = { currentScreen = AppScreen.HOME }
+                    )
+                }
+
+                AppScreen.GAMEPLAY_RESPONSIVENESS -> {
+                    GameplayResponsivenessScreen(
+                        onBack = { currentScreen = AppScreen.HOME }
+                    )
+                }
+
+                AppScreen.POST_MATCH_REPORT -> {
+                    uiState.sessionState.latestPostMatchReport?.let { report ->
+                        PostMatchReportScreen(
+                            report = report,
+                            onRollbackSettings = {
+                                viewModel.rollbackLastSession()
+                                currentScreen = AppScreen.HOME
+                            },
+                            onDismiss = {
+                                viewModel.dismissPostMatchReport()
+                                currentScreen = AppScreen.HOME
+                            }
+                        )
+                    } ?: run {
+                        currentScreen = AppScreen.HOME
+                    }
+                }
+
+                AppScreen.SELF_AUDIT -> {
+                    SelfAuditScreen(
                         onBack = { currentScreen = AppScreen.HOME }
                     )
                 }

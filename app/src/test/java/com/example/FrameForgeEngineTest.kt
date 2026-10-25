@@ -234,4 +234,92 @@ class FrameForgeEngineTest {
         assertFalse(defaultReport.isTestingActive)
         assertTrue(defaultReport.recommendations.any { it.contains("Krafton") || it.contains("Tencent") })
     }
+
+    @Test
+    fun testGyroFilterProfiles() {
+        val profiles = com.example.core.sensors.GyroFilterProfile.values()
+        assertEquals(4, profiles.size)
+
+        val bypass = com.example.core.sensors.GyroFilterProfile.BYPASS
+        assertEquals(0.0f, bypass.latencyOverheadMs, 0.001f)
+        assertEquals(0, bypass.noiseReductionPct)
+
+        val standard = com.example.core.sensors.GyroFilterProfile.STANDARD
+        assertEquals(0.2f, standard.latencyOverheadMs, 0.001f)
+        assertEquals(35, standard.noiseReductionPct)
+
+        val high = com.example.core.sensors.GyroFilterProfile.HIGH
+        assertEquals(0.6f, high.latencyOverheadMs, 0.001f)
+        assertEquals(65, high.noiseReductionPct)
+
+        val highest = com.example.core.sensors.GyroFilterProfile.HIGHEST
+        assertEquals(1.2f, highest.latencyOverheadMs, 0.001f)
+        assertEquals(85, highest.noiseReductionPct)
+    }
+
+    @Test
+    fun testThermalFiveStateTransitions() {
+        val states = com.example.core.thermal.ThermalState.values()
+        assertEquals(5, states.size)
+        assertTrue(states.contains(com.example.core.thermal.ThermalState.COOL))
+        assertTrue(states.contains(com.example.core.thermal.ThermalState.WARM))
+        assertTrue(states.contains(com.example.core.thermal.ThermalState.HOT))
+        assertTrue(states.contains(com.example.core.thermal.ThermalState.THROTTLING_RISK))
+        assertTrue(states.contains(com.example.core.thermal.ThermalState.RECOVERING))
+
+        val optimalVerdict = com.example.core.thermal.MatchReadinessVerdict.OPTIMAL
+        assertTrue(optimalVerdict.label.contains("8v8 WOW"))
+    }
+
+    @Test
+    fun testTouchLatencyMetricsCalculations() {
+        val manager = com.example.core.touch.TouchLatencyManager()
+        val metrics = manager.metrics.value
+        assertEquals(0L, metrics.totalSampleCount)
+        assertTrue(metrics.avgTouchToDrawLatencyMs > 0f)
+        assertTrue(metrics.estimatedTouchSamplingRateHz >= 120)
+    }
+
+    @Test
+    fun testCapabilityStatuses() {
+        val statuses = com.example.core.adapter.CapabilityStatus.values()
+        assertEquals(5, statuses.size)
+        assertTrue(statuses.contains(com.example.core.adapter.CapabilityStatus.AVAILABLE))
+        assertTrue(statuses.contains(com.example.core.adapter.CapabilityStatus.SUPPORTED_UNAUTHORIZED))
+        assertTrue(statuses.contains(com.example.core.adapter.CapabilityStatus.APPLIED_VERIFIED))
+        assertTrue(statuses.contains(com.example.core.adapter.CapabilityStatus.FAILED))
+        assertTrue(statuses.contains(com.example.core.adapter.CapabilityStatus.UNSUPPORTED))
+    }
+
+    @Test
+    fun testRawPerformanceProfileDefault() {
+        val rawState = RawPerformanceState()
+        assertTrue(rawState.isEnabled)
+        assertEquals(PerformanceMode.RAW_PERFORMANCE, rawState.currentMode)
+        assertTrue(rawState.applyWhenLaunchingGame)
+        assertTrue(rawState.autoRestoreAfterGameExit)
+    }
+
+    @Test
+    fun testPostMatchReportFields() {
+        val report = com.example.core.gameplay.PostMatchReport(
+            gameTitle = "PUBG MOBILE",
+            packageName = "com.tencent.ig",
+            durationSeconds = 1200L,
+            initialTempCelsius = 35.0f,
+            finalTempCelsius = 39.5f,
+            tempDeltaCelsius = 4.5f,
+            initialBatteryPct = 90,
+            finalBatteryPct = 78,
+            batteryDrainPct = 12,
+            appliedProfileSummary = "Smooth @ 120 FPS",
+            zeroOverheadVerified = true
+        )
+
+        assertEquals("com.tencent.ig", report.packageName)
+        assertEquals(1200L, report.durationSeconds)
+        assertEquals(4.5f, report.tempDeltaCelsius, 0.01f)
+        assertEquals(12, report.batteryDrainPct)
+        assertTrue(report.zeroOverheadVerified)
+    }
 }

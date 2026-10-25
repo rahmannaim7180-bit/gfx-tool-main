@@ -15,9 +15,14 @@ import com.example.core.shizuku.ShizukuIntegrationManager
 import com.example.data.local.AppDatabase
 import com.example.data.preferences.UserPreferencesRepository
 
+import com.example.core.adapter.UniversalCapabilityRegistry
+import com.example.core.gameplay.GameSessionManager
 import com.example.core.network.NetworkDiagnosticsEngine
 import com.example.core.performance.FramePacingGovernor
+import com.example.core.sensors.GyroLabManager
 import com.example.core.system.SystemAnimationController
+import com.example.core.thermal.ThermalGovernor
+import com.example.core.touch.TouchLatencyManager
 
 class FrameForgeApplication : Application() {
 
@@ -34,6 +39,16 @@ class FrameForgeApplication : Application() {
     lateinit var displayRefreshManager: DisplayRefreshManager
         private set
     lateinit var gyroBoostEngine: GyroBoostEngine
+        private set
+    lateinit var gyroLabManager: GyroLabManager
+        private set
+    lateinit var touchLatencyManager: TouchLatencyManager
+        private set
+    lateinit var thermalGovernor: ThermalGovernor
+        private set
+    lateinit var universalCapabilityRegistry: UniversalCapabilityRegistry
+        private set
+    lateinit var gameSessionManager: GameSessionManager
         private set
     lateinit var framePacingTracker: FramePacingTracker
         private set
@@ -63,6 +78,11 @@ class FrameForgeApplication : Application() {
         diagnosticsProvider = DeviceDiagnosticsProvider(this)
         displayRefreshManager = DisplayRefreshManager(this)
         gyroBoostEngine = GyroBoostEngine(this)
+        gyroLabManager = GyroLabManager(this)
+        touchLatencyManager = TouchLatencyManager()
+        thermalGovernor = ThermalGovernor(this)
+        universalCapabilityRegistry = UniversalCapabilityRegistry(this)
+        gameSessionManager = GameSessionManager(this, database.auditLogDao(), thermalGovernor, gyroLabManager)
         framePacingTracker = FramePacingTracker()
         framePacingGovernor = FramePacingGovernor()
         bottleneckDetector = BottleneckDetector(this)

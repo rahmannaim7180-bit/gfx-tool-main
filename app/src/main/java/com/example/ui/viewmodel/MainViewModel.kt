@@ -38,7 +38,14 @@ data class UiState(
     val recentAuditLogs: List<com.example.data.local.entity.AuditLogEntity> = emptyList(),
     val networkReport: NetworkQualityReport = NetworkQualityReport(),
     val animationState: com.example.core.system.AnimationControllerState = com.example.core.system.AnimationControllerState(),
-    val framePacingVerdict: com.example.core.performance.FramePacingVerdict? = null
+    val framePacingVerdict: com.example.core.performance.FramePacingVerdict? = null,
+    val thermalSnapshot: com.example.core.thermal.ThermalSnapshot = com.example.core.thermal.ThermalSnapshot(),
+    val matchReadinessReport: com.example.core.thermal.MatchReadinessReport? = null,
+    val gyroTelemetry: com.example.core.sensors.GyroDiagnosticTelemetry = com.example.core.sensors.GyroDiagnosticTelemetry(),
+    val gyroSpecs: com.example.core.sensors.GyroHardwareSpecs = com.example.core.sensors.GyroHardwareSpecs(),
+    val touchMetrics: com.example.core.touch.TouchLatencyMetrics = com.example.core.touch.TouchLatencyMetrics(),
+    val capabilityRegistry: List<com.example.core.adapter.CapabilityEntry> = emptyList(),
+    val sessionState: com.example.core.gameplay.ActiveSessionState = com.example.core.gameplay.ActiveSessionState()
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -133,6 +140,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             app.systemAnimationController.state.collect { animState ->
                 _uiState.update { it.copy(animationState = animState) }
             }
+        }
+
+        // Collect Thermal Governor Snapshot
+        viewModelScope.launch {
+            app.thermalGovernor.snapshot.collect { snap ->
+                _uiState.update { it.copy(thermalSnapshot = snap) }
+            }
+        }
+
+        // Collect Gyro Lab Telemetry
+        viewModelScope.launch {
+            app.gyroLabManager.telemetry.collect { gyroTel ->
+                _uiState.update { it.copy(gyroTelemetry = gyroTel) }
+            }
+        }
+
+        // Collect Touch Latency Metrics
+        viewModelScope.launch {
+            app.touchLatencyManager.metrics.collect { touchMet ->
+                _uiState.update { it.copy(touchMetrics = touchMet) }
+            }
+        }
+
+        // Collect Game Session State
+        viewModelScope.launch {
+            app.gameSessionManager.sessionState.collect { sessState ->
+                _uiState.update { it.copy(sessionState = sessState) }
+            }
+        }
+
+        // Initialize Gyro Specs and Capability Registry
+        _uiState.update {
+            it.copy(
+                gyroSpecs = app.gyroLabManager.hardwareSpecs,
+                capabilityRegistry = app.universalCapabilityRegistry.inspectAllCapabilities(
+                    it.deviceSummary,
+                    it.shizukuStatus.isAuthorized
+                )
+            )
         }
 
         // Load persisted game profile
@@ -549,6 +595,92 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             hasExternalCooler = hasCooler
         )
         _uiState.update { it.copy(framePacingVerdict = verdict) }
+    }
+
+    // 8v8 Match Readiness
+    fun evaluate8v8MatchReadiness() {
+        val report = app.thermalGovernor.evaluateMatchReadiness()
+        _uiState.update { it.copy(matchReadinessReport = report) }
+        showNotification("8v8 Readiness: ${report.verdict.label} (Score: ${report.score}/100)")
+    }
+
+    // Gyroscope Lab Actions
+    fun startGyroLab() {
+        app.gyroLabManager.startDiagnostics()
+    }
+
+    fun stopGyroLab() {
+        app.gyroLabManager.stopDiagnostics()
+    }
+
+    fun selectGyroProfile(profile: com.example.core.sensors.GyroFilterProfile) {
+        app.gyroLabManager.setFilterProfile(profile)
+        showNotification("Applied Gyro Profile: ${profile.title}")
+    }
+
+    fun startStationaryGyroCalibration() {
+        app.gyroLabManager.startStationaryBaselineCalibration()
+    }
+
+    fun startRotationGyroTest() {
+        app.gyroLabManager.startControlledRotationTest()
+    }
+
+    fun resetGyroCalibration() {
+        app.gyroLabManager.resetCalibrationToDefaults()
+        showNotification("Gyroscope reset to factory neutral calibration")
+    }
+
+    // Touch Latency Actions
+    fun recordTouchEvent(event: android.view.MotionEvent) {
+        app.touchLatencyManager.recordTouchEvent(event)
+    }
+
+    fun resetTouchMetrics() {
+        app.touchLatencyManager.reset()
+        showNotification("Touch latency metrics reset")
+    }
+
+    // Zero-Overhead Game Session Launch & Teardown
+    fun launchGameSession(targetGame: GameTarget, profile: GraphicsProfile) {
+        viewModelScope.launch {
+            val result = app.gameSessionManager.launchGameSession(
+                targetGame = targetGame,
+                profile = profile,
+                onPauseBackgroundDiagnostics = {
+                    // Zero overhead: pause telemetry polling and frame tracking
+                    telemetryJob?.cancel()
+                    app.framePacingTracker.stopTracking()
+                }
+            )
+            if (result.isSuccess) {
+                showNotification("Launching ${targetGame.displayName}. Zero-overhead mode active.")
+            } else {
+                showNotification("Failed to launch ${targetGame.displayName}")
+            }
+        }
+    }
+
+    fun endCurrentGameSession() {
+        viewModelScope.launch {
+            val report = app.gameSessionManager.endSessionAndGenerateReport()
+            // Resume telemetry polling now that match has finished
+            startTelemetryPolling()
+            showNotification("Session finished. Match duration: ${report.durationSeconds}s")
+        }
+    }
+
+    fun dismissPostMatchReport() {
+        app.gameSessionManager.dismissReport()
+    }
+
+    fun rollbackLastSession() {
+        viewModelScope.launch {
+            // Restore animation scales and rollback temporary display/game settings
+            restoreAnimationScales()
+            dismissPostMatchReport()
+            showNotification("Session settings rolled back successfully")
+        }
     }
 
     fun clearNotification() {

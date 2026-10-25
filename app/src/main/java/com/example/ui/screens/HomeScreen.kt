@@ -43,8 +43,13 @@ fun HomeScreen(
     onSelectGame: (GameTarget) -> Unit,
     onNavigateToNetworkQuality: () -> Unit = {},
     onNavigateToCompatibility: () -> Unit = {},
-    onNavigateToDeviceComparison: () -> Unit = {},
-    onNavigateToFramePacing: () -> Unit = {}
+    onNavigateToDeviceCapabilities: () -> Unit = {},
+    onNavigateToFramePacing: () -> Unit = {},
+    onNavigateToTouchLab: () -> Unit = {},
+    onNavigateToGameplayLab: () -> Unit = {},
+    onNavigateToSelfAudit: () -> Unit = {},
+    onEvaluate8v8Readiness: () -> Unit = {},
+    onLaunchZeroOverheadGame: (GameTarget, com.example.data.model.GraphicsProfile) -> Unit = { _, _ -> }
 ) {
     var showGamePicker by remember { mutableStateOf(false) }
 
@@ -178,6 +183,112 @@ fun HomeScreen(
                         contentDescription = "Switch Game",
                         tint = ElectricCyan
                     )
+                }
+            }
+        }
+
+        // 8v8 WOW Match Readiness Card
+        item {
+            GamingCard(
+                borderColor = when (uiState.thermalSnapshot.thermalState) {
+                    com.example.core.thermal.ThermalState.COOL -> ElectricCyan.copy(alpha = 0.5f)
+                    com.example.core.thermal.ThermalState.WARM -> NeonGold.copy(alpha = 0.5f)
+                    else -> CoralRed.copy(alpha = 0.5f)
+                },
+                backgroundColor = GamingSurface
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Whatshot,
+                                contentDescription = null,
+                                tint = when (uiState.thermalSnapshot.thermalState) {
+                                    com.example.core.thermal.ThermalState.COOL -> ElectricCyan
+                                    com.example.core.thermal.ThermalState.WARM -> NeonGold
+                                    else -> CoralRed
+                                },
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "8v8 WOW MATCH READINESS",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                letterSpacing = 1.sp
+                            )
+                        }
+
+                        Surface(
+                            color = when (uiState.thermalSnapshot.thermalState) {
+                                com.example.core.thermal.ThermalState.COOL -> ElectricCyan.copy(alpha = 0.15f)
+                                com.example.core.thermal.ThermalState.WARM -> NeonGold.copy(alpha = 0.15f)
+                                else -> CoralRed.copy(alpha = 0.15f)
+                            },
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = "STATE: ${uiState.thermalSnapshot.thermalState.displayName.uppercase()}",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = when (uiState.thermalSnapshot.thermalState) {
+                                    com.example.core.thermal.ThermalState.COOL -> ElectricCyan
+                                    com.example.core.thermal.ThermalState.WARM -> NeonGold
+                                    else -> CoralRed
+                                },
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("Battery Temp", fontSize = 10.sp, color = TextMuted)
+                            Text(
+                                "${String.format("%.1f", uiState.thermalSnapshot.batteryTempCelsius)}°C",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (uiState.thermalSnapshot.batteryTempCelsius < 40f) TextPrimary else CoralRed
+                            )
+                        }
+                        Column {
+                            Text("Thermal Headroom", fontSize = 10.sp, color = TextMuted)
+                            Text(
+                                "${(uiState.thermalSnapshot.thermalHeadroom * 100).toInt()}%",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = ElectricCyan
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("Readiness Score", fontSize = 10.sp, color = TextMuted)
+                            val score = uiState.matchReadinessReport?.score ?: 92
+                            Text(
+                                "$score / 100",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (score >= 80) ElectricCyan else NeonGold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = onEvaluate8v8Readiness,
+                        modifier = Modifier.fillMaxWidth().testTag("eval_8v8_readiness_btn"),
+                        colors = ButtonDefaults.buttonColors(containerColor = GamingSurfaceLight)
+                    ) {
+                        Text("Audit 8v8 Match Readiness", fontSize = 11.sp, color = TextPrimary)
+                    }
                 }
             }
         }
@@ -377,8 +488,11 @@ fun HomeScreen(
 
                     if (!uiState.isGameSessionActive) {
                         GamingButton(
-                            text = "START GAMING SESSION",
-                            onClick = onStartGameSession,
+                            text = "START GAMING (ZERO OVERHEAD)",
+                            onClick = {
+                                onLaunchZeroOverheadGame(uiState.selectedGame, uiState.activeProfile)
+                                onStartGameSession()
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             testTag = "start_session_button"
                         )
@@ -455,15 +569,15 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 QuickNavCard(
-                    title = "GyroBoost",
-                    subtitle = "Sensitivity Assist",
+                    title = "GyroBoost Lab",
+                    subtitle = "iQOO Profiles & Jitter",
                     icon = Icons.Default.ScreenRotation,
                     onClick = onNavigateToGyroBoost,
                     modifier = Modifier.weight(1f)
                 )
                 QuickNavCard(
                     title = "Thermal Engine",
-                    subtitle = "Sustained / Raw",
+                    subtitle = "5-State Governor",
                     icon = Icons.Default.Thermostat,
                     onClick = onNavigateToPerformanceEngine,
                     modifier = Modifier.weight(1f)
@@ -499,17 +613,39 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 QuickNavCard(
-                    title = "Compatibility DB",
-                    subtitle = "Verified OEM Skins",
-                    icon = Icons.Default.Devices,
-                    onClick = onNavigateToCompatibility,
+                    title = "Device Capabilities",
+                    subtitle = "Audit & Adapters",
+                    icon = Icons.Default.DeveloperMode,
+                    onClick = onNavigateToDeviceCapabilities,
                     modifier = Modifier.weight(1f)
                 )
                 QuickNavCard(
-                    title = "Device Comparison",
-                    subtitle = "vs Flagships (ROG/RedMagic)",
-                    icon = Icons.Default.CompareArrows,
-                    onClick = onNavigateToDeviceComparison,
+                    title = "Touch Lab",
+                    subtitle = "Latency & Polling",
+                    icon = Icons.Default.TouchApp,
+                    onClick = onNavigateToTouchLab,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                QuickNavCard(
+                    title = "Gameplay Lab",
+                    subtitle = "Aim & Scope Timing",
+                    icon = Icons.Default.GpsFixed,
+                    onClick = onNavigateToGameplayLab,
+                    modifier = Modifier.weight(1f)
+                )
+                QuickNavCard(
+                    title = "Self Audit",
+                    subtitle = "Zero-Overhead Proof",
+                    icon = Icons.Default.Memory,
+                    onClick = onNavigateToSelfAudit,
                     modifier = Modifier.weight(1f)
                 )
             }

@@ -18,13 +18,13 @@ data class ActiveOptimizationItem(
 )
 
 data class RawPerformanceState(
-    val isEnabled: Boolean = false,
+    val isEnabled: Boolean = true,
     val useAdbShizuku: Boolean = false,
     val applyWhenLaunchingGame: Boolean = true,
     val autoRestoreAfterGameExit: Boolean = true,
     val isExternalCoolerActive: Boolean = false,
     val thermalHeadroom: Float = 0.85f,
-    val currentMode: PerformanceMode = PerformanceMode.SUSTAINED_COMPETITIVE,
+    val currentMode: PerformanceMode = PerformanceMode.RAW_PERFORMANCE,
     val optimizations: List<ActiveOptimizationItem> = listOf(
         ActiveOptimizationItem(
             id = "cpu_hints",
