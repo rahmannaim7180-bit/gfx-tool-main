@@ -37,7 +37,11 @@ data class DeviceSummary(
     val maxRefreshRateHz: Int,
     val supportedRefreshRates: List<Float>,
     val isVivoOriginOsTarget: Boolean
-)
+) {
+    val socName: String get() = chipset
+    val ramTotalMb: Long get() = totalRamMb
+    val maxRefreshRate: Int get() = maxRefreshRateHz
+}
 
 class DeviceDiagnosticsProvider(private val context: Context) {
 

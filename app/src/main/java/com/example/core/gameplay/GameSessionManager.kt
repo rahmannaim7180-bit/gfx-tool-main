@@ -62,19 +62,18 @@ class GameSessionManager(
         val initialBattery = thermalSnap.batteryPct
 
         val appliedList = mutableListOf<String>()
-        appliedList.add("Profile: ${profile.quality.displayName} @ ${profile.frameRate.targetFps} FPS")
+        appliedList.add("Profile: ${profile.quality.displayName} @ ${profile.frameRate.fpsValue} FPS")
         appliedList.add("Thermal Governor: 5-State ADPF Monitor Active")
 
         // Log transaction to Room AuditLogDao for full reversibility
         runCatching {
-            auditLogDao.insertAuditLog(
+            auditLogDao.insertLog(
                 AuditLogEntity(
                     command = "GAME_SESSION_START: ${targetGame.packageName}",
-                    category = "Game Launch Session",
+                    commandTitle = "Game Launch Session: ${targetGame.displayName}",
+                    executionResult = "Snapshot captured. Initial Temp: ${initialTemp}°C, Battery: ${initialBattery}%",
                     exitCode = 0,
-                    output = "Snapshot captured. Target: ${targetGame.displayName}. Initial Temp: ${initialTemp}°C, Battery: ${initialBattery}%",
-                    isVerified = true,
-                    isReversible = true
+                    isRolledBack = false
                 )
             )
         }
@@ -133,14 +132,13 @@ class GameSessionManager(
 
         // Log session completion to Room AuditLogDao
         runCatching {
-            auditLogDao.insertAuditLog(
+            auditLogDao.insertLog(
                 AuditLogEntity(
                     command = "GAME_SESSION_END: ${report.packageName}",
-                    category = "Game Launch Session",
+                    commandTitle = "Game Session End",
+                    executionResult = "Match finished. Duration: ${durationSec}s, Temp Delta: ${String.format("%+.1f", tempDelta)}°C, Drain: ${batteryDrain}%. Zero background overhead maintained.",
                     exitCode = 0,
-                    output = "Match finished. Duration: ${durationSec}s, Temp Delta: ${String.format("%+.1f", tempDelta)}°C, Drain: ${batteryDrain}%. Zero background overhead maintained.",
-                    isVerified = true,
-                    isReversible = false
+                    isRolledBack = false
                 )
             )
         }

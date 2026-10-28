@@ -71,16 +71,17 @@ data class RawPerformanceState(
 )
 
 enum class GyroMode(val displayName: String) {
-    STANDARD("Standard (1:1 Direct)"),
-    ENHANCED("Enhanced (Smooth Response)"),
-    PRO("Pro (Esports Low Latency)")
+    RAW_PASSTHROUGH("Bypass Mode (Raw 1:1)"),
+    LIGHT_FILTER("Standard Profile (Balanced)"),
+    AGGRESSIVE_STABILIZATION("High Profile (Ultra Smooth)"),
+    PREDICTIVE_AIM("Highest Profile (Pro E-Sports)")
 }
 
 data class GyroBoostConfig(
     val isEnabled: Boolean = true,
     val xSensitivityPercent: Int = 100,
     val ySensitivityPercent: Int = 100,
-    val mode: GyroMode = GyroMode.ENHANCED,
+    val mode: GyroMode = GyroMode.LIGHT_FILTER,
     val antiDriftFilter: Boolean = true,
     val sensorModel: String = "Detecting sensor...",
     val maxSamplingRateHz: Float = 416f,
@@ -93,4 +94,7 @@ data class GyroBoostConfig(
     val isTestRunning: Boolean = false,
     val testScore: Int = 96,
     val oemIntegrationStatus: String = "OriginOS does not expose third-party raw gyro multiplier APIs; In-Game Sensitivity Assistant active"
-)
+) {
+    val xMultiplier: Float get() = (xSensitivityPercent / 100f).coerceIn(0.5f, 2.5f)
+    val yMultiplier: Float get() = (ySensitivityPercent / 100f).coerceIn(0.5f, 2.5f)
+}

@@ -81,9 +81,10 @@ class ThermalGovernor(private val context: Context) {
         }
 
         // Register PowerManager thermal status listener on Android 10+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && powerManager != null) {
+        val pm = powerManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && pm != null) {
             runCatching {
-                powerManager.addThermalStatusListener { statusCode ->
+                pm.addThermalStatusListener { statusCode ->
                     onOsThermalStatusChanged(statusCode)
                 }
             }
@@ -104,10 +105,11 @@ class ThermalGovernor(private val context: Context) {
     }
 
     fun pollHeadroom() {
-        val currentHeadroom = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && powerManager != null) {
+        val pm = powerManager
+        val currentHeadroom = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && pm != null) {
             runCatching {
                 // Lookahead 10 seconds forecast
-                powerManager.getThermalHeadroom(10)
+                pm.getThermalHeadroom(10)
             }.getOrDefault(0.85f)
         } else {
             // Inferred from battery temperature if headroom API not supported

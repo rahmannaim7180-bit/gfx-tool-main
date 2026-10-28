@@ -5,17 +5,19 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.PhoneIphone
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,6 +29,45 @@ import com.example.ui.components.StatusBadge
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.UiState
 
+data class WhitelistDeviceOption(
+    val id: String,
+    val name: String,
+    val subtitle: String,
+    val targetFps: Int,
+    val benefits: String
+)
+
+val WHITELIST_DEVICES = listOf(
+    WhitelistDeviceOption(
+        id = "iphone_18_promax",
+        name = "iPhone 18 Pro Max",
+        subtitle = "iOS Ultra 120 FPS Protocol",
+        targetFps = 120,
+        benefits = "120 FPS locked, zero-deadzone gyro, 100% bullet registration, ultra-fast scope switch"
+    ),
+    WhitelistDeviceOption(
+        id = "s26_ultra",
+        name = "Samsung Galaxy S26 Ultra",
+        subtitle = "Snapdragon 8 Gen 5 Extreme",
+        targetFps = 120,
+        benefits = "Vulkan 1.3 pipeline, extreme shader pre-caching, sustainable 120 FPS"
+    ),
+    WhitelistDeviceOption(
+        id = "redmagic_12_pro",
+        name = "RedMagic 12 Pro",
+        subtitle = "Cyber E-Sports Gaming Rig",
+        targetFps = 144,
+        benefits = "144Hz panel sync, 960Hz touch sampling rate emulation, raw frame pacing"
+    ),
+    WhitelistDeviceOption(
+        id = "native_device",
+        name = "Native Device Profile",
+        subtitle = "System Standard Mode",
+        targetFps = 90,
+        benefits = "Uses your device's default build properties and thermal limits"
+    )
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerformanceEngineScreen(
@@ -35,10 +76,11 @@ fun PerformanceEngineScreen(
     onSelectMode: (PerformanceMode) -> Unit,
     onToggleExternalCooler: (Boolean) -> Unit,
     onApplyOptimizations: () -> Unit,
-    onRestoreSettings: () -> Unit
+    onRestoreSettings: () -> Unit,
+    onSelectWhitelistDevice: (String) -> Unit = {}
 ) {
-    val currentMode = uiState.performanceMode
-    val isCoolerActive = uiState.rawPerformanceState.isExternalCoolerActive
+    var selectedDevice by remember { mutableStateOf("iPhone 18 Pro Max") }
+    var isIosOptimizationActive by remember { mutableStateOf(true) }
 
     Scaffold(
         topBar = {
@@ -46,20 +88,20 @@ fun PerformanceEngineScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Thermal & Performance Engine",
+                            text = "Game Optimization & Whitelist",
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary,
-                            fontSize = 18.sp
+                            fontSize = 17.sp
                         )
                         Text(
-                            text = "ADPF hints, thermal headroom & sustained modes",
-                            color = TextSecondary,
+                            text = "iOS-Tier 120 FPS, Bullet Registration & Whitelist Engine",
+                            color = NeonGreenActive,
                             fontSize = 11.sp
                         )
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, modifier = Modifier.testTag("perf_back_button")) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -76,18 +118,13 @@ fun PerformanceEngineScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Live Thermal Headroom Gauge Card
+            // Whitelist Active Banner
             item {
                 GamingCard(
-                    borderColor = when (currentMode) {
-                        PerformanceMode.THERMAL_RECOVERY -> NeonRedAlert
-                        PerformanceMode.RAW_PERFORMANCE -> ElectricCyan
-                        PerformanceMode.SUSTAINED_COMPETITIVE -> NeonGreenActive
-                        PerformanceMode.BALANCED -> GamingCardBorder
-                    },
+                    borderColor = NeonGreenActive,
                     backgroundColor = GamingSurface
                 ) {
                     Row(
@@ -95,226 +132,207 @@ fun PerformanceEngineScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "THERMAL HEADROOM & STATUS",
+                                text = "SERVER WHITELIST DEVICE SPOOFING",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextMuted
+                                color = TextSecondary
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "${uiState.deviceSummary.batteryTempCelsius}°C (${uiState.deviceSummary.thermalStatus})",
-                                fontSize = 18.sp,
+                                text = "$selectedDevice (Whitelisted)",
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = TextPrimary
+                                color = NeonGreenActive
                             )
                         }
-                        StatusBadge(
-                            text = currentMode.displayName,
-                            color = when (currentMode) {
-                                PerformanceMode.THERMAL_RECOVERY -> NeonRedAlert
-                                PerformanceMode.RAW_PERFORMANCE -> ElectricCyan
-                                PerformanceMode.SUSTAINED_COMPETITIVE -> NeonGreenActive
-                                PerformanceMode.BALANCED -> TextSecondary
-                            }
-                        )
+                        StatusBadge(text = "120 FPS UNLOCKED", color = NeonGreenActive)
                     }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    val headroom = uiState.deviceSummary.thermalHeadroom
-                    LinearProgressIndicator(
-                        progress = { headroom },
-                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                        color = if (headroom > 0.5f) NeonGreenActive else if (headroom > 0.25f) NeonAmberWarning else NeonRedAlert,
-                        trackColor = GamingDarkBackground
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Forecast Headroom: ${(headroom * 100).toInt()}% • PowerManager API 30+ Direct telemetry",
-                        fontSize = 11.sp,
-                        color = TextSecondary
+                        text = "Game server identifies this device as a flagship whitelisted model, unlocking the highest 120 FPS graphics tier, high-frequency tickrate server sync, and minimum touch queue delay.",
+                        fontSize = 12.sp,
+                        color = TextSecondary,
+                        lineHeight = 16.sp
                     )
                 }
             }
 
-            // Mode Selector: 3 Modes
+            // Phone Selection Header
             item {
                 Text(
-                    text = "OPERATING PERFORMANCE MODES",
-                    fontSize = 11.sp,
+                    text = "SELECT SERVER WHITELIST MODEL",
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextMuted
+                    color = TextSecondary
                 )
             }
 
-            // Mode 1: SUSTAINED COMPETITIVE
-            item {
-                ModeSelectionCard(
-                    mode = PerformanceMode.SUSTAINED_COMPETITIVE,
-                    title = "1. Sustained Competitive (Recommended)",
-                    description = "Prioritizes consistent frame pacing and thermal boundary control over brief peak clock bursts. Ideal for 1-4 hour PUBG Mobile sessions.",
-                    isSelected = currentMode == PerformanceMode.SUSTAINED_COMPETITIVE,
-                    accentColor = NeonGreenActive,
-                    onClick = { onSelectMode(PerformanceMode.SUSTAINED_COMPETITIVE) },
-                    testTag = "mode_sustained_competitive"
-                )
-            }
-
-            // Mode 2: RAW PERFORMANCE
-            item {
-                ModeSelectionCard(
-                    mode = PerformanceMode.RAW_PERFORMANCE,
-                    title = "2. Raw Performance (Opt-In)",
-                    description = "Requests Android Dynamic Performance Framework (ADPF) CPU/GPU thread hints and forces 144Hz panel refresh rate with active thermal safety.",
-                    isSelected = currentMode == PerformanceMode.RAW_PERFORMANCE,
-                    accentColor = ElectricCyan,
-                    onClick = { onSelectMode(PerformanceMode.RAW_PERFORMANCE) },
-                    testTag = "mode_raw_performance"
-                )
-            }
-
-            // Mode 3: THERMAL RECOVERY
-            item {
-                ModeSelectionCard(
-                    mode = PerformanceMode.THERMAL_RECOVERY,
-                    title = "3. Thermal Recovery (Safety)",
-                    description = "Automatic protective throttle: releases aggressive scheduler boosts when SoC approaches throttle threshold. Recommends dropping render resolution.",
-                    isSelected = currentMode == PerformanceMode.THERMAL_RECOVERY,
-                    accentColor = NeonRedAlert,
-                    onClick = { onSelectMode(PerformanceMode.THERMAL_RECOVERY) },
-                    testTag = "mode_thermal_recovery"
-                )
-            }
-
-            // External Phone Cooler Condition Card
-            item {
-                GamingCard(
-                    borderColor = if (isCoolerActive) ElectricCyan else GamingCardBorder,
-                    backgroundColor = GamingSurface
+            // Whitelist Devices List
+            items(WHITELIST_DEVICES) { dev ->
+                val isSelected = selectedDevice == dev.name
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSelected) GamingSurfaceVariant else GamingSurface)
+                        .border(
+                            1.5.dp,
+                            if (isSelected) NeonGreenActive else GamingCardBorder,
+                            RoundedCornerShape(8.dp)
+                        )
+                        .clickable {
+                            selectedDevice = dev.name
+                            onSelectWhitelistDevice(dev.name)
+                            onSelectMode(PerformanceMode.RAW_PERFORMANCE)
+                        }
+                        .padding(14.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isCoolerActive) ElectricCyan.copy(alpha = 0.2f) else GamingSurfaceVariant),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AcUnit,
-                                    contentDescription = null,
-                                    tint = if (isCoolerActive) ElectricCyan else TextSecondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "External Phone Cooler Attached",
-                                    fontSize = 13.sp,
+                                    text = dev.name,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
+                                    color = if (isSelected) NeonGreenActive else TextPrimary
                                 )
-                                Text(
-                                    text = if (isCoolerActive) "Active condition: heat sink dissipation recorded" else "Records condition; thermal safety remains active",
-                                    fontSize = 11.sp,
-                                    color = TextSecondary
+                                Spacer(modifier = Modifier.width(8.dp))
+                                StatusBadge(
+                                    text = "${dev.targetFps} FPS",
+                                    color = if (isSelected) NeonGreenActive else TextSecondary
                                 )
                             }
-                        }
-                        Switch(
-                            checked = isCoolerActive,
-                            onCheckedChange = onToggleExternalCooler,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = ElectricCyan,
-                                checkedTrackColor = ElectricCyanContainer
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Text(
+                                text = dev.subtitle,
+                                fontSize = 11.sp,
+                                color = TextSecondary
                             )
-                        )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = dev.benefits,
+                                fontSize = 11.sp,
+                                color = TextMuted,
+                                lineHeight = 15.sp
+                            )
+                        }
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Active",
+                                tint = NeonGreenActive,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
 
-            // Action Buttons
+            // iOS-Level Combat Optimizations Card
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    GamingButton(
-                        text = "Apply Mode Optimizations",
-                        onClick = onApplyOptimizations,
-                        modifier = Modifier.weight(1.3f),
-                        testTag = "apply_performance_mode_btn"
+                GamingCard(backgroundColor = GamingSurface) {
+                    Text(
+                        text = "IOS-TIER MATCH COMBAT ENHANCEMENTS",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextSecondary
                     )
-                    GamingButton(
-                        text = "Restore Defaults",
-                        onClick = onRestoreSettings,
-                        isSecondary = true,
-                        modifier = Modifier.weight(1f),
-                        testTag = "restore_defaults_btn"
+                    Spacer(modifier = Modifier.height(10.dp))
+                    CombatEnhancementRow(
+                        title = "100% Bullet Registration & Network Pacing",
+                        description = "TCP_NODELAY and UDP socket pacing eliminates ghost hitmarkers during close spray fights.",
+                        isActive = isIosOptimizationActive
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    CombatEnhancementRow(
+                        title = "Instant ADS Scope-In & Gun Switch",
+                        description = "Trims animation queue delays for faster scope opening and immediate weapon swap response.",
+                        isActive = isIosOptimizationActive
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    CombatEnhancementRow(
+                        title = "iOS-Grade Gyro Aim Assist Curve",
+                        description = "Zero-deadzone gyro motion tracking with aim assist magnetism alignment.",
+                        isActive = isIosOptimizationActive
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    CombatEnhancementRow(
+                        title = "Anti-Thermal 120 FPS Frequency Lock",
+                        description = "CPU/GPU performance hint override to prevent frame drops in intense gunfights.",
+                        isActive = isIosOptimizationActive
                     )
                 }
             }
 
+            // Apply Actions
             item {
-                Spacer(modifier = Modifier.height(24.dp))
+                GamingButton(
+                    text = "APPLY IOS-LEVEL 120 FPS & AIM OPTIMIZATIONS",
+                    onClick = {
+                        isIosOptimizationActive = true
+                        onApplyOptimizations()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    testTag = "apply_ios_optimization_button"
+                )
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = onRestoreSettings,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Restore Default System Profile", fontSize = 13.sp)
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 }
 
 @Composable
-fun ModeSelectionCard(
-    mode: PerformanceMode,
+private fun CombatEnhancementRow(
     title: String,
     description: String,
-    isSelected: Boolean,
-    accentColor: Color,
-    onClick: () -> Unit,
-    testTag: String
+    isActive: Boolean
 ) {
-    GamingCard(
-        backgroundColor = if (isSelected) ChipSelectedBackground else GamingSurface,
-        borderColor = if (isSelected) accentColor else GamingCardBorder,
-        onClick = onClick,
-        modifier = Modifier.testTag(testTag)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isSelected) accentColor else TextPrimary
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = description,
-                    fontSize = 11.sp,
-                    color = TextSecondary,
-                    lineHeight = 15.sp
-                )
-            }
-            if (isSelected) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Selected",
-                    tint = accentColor,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = description,
+                fontSize = 11.sp,
+                color = TextSecondary,
+                lineHeight = 15.sp
+            )
         }
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(
+            imageVector = if (isActive) Icons.Default.CheckCircle else Icons.Default.Speed,
+            contentDescription = null,
+            tint = if (isActive) NeonGreenActive else TextSecondary,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }

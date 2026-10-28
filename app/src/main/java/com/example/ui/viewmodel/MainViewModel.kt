@@ -45,8 +45,12 @@ data class UiState(
     val gyroSpecs: com.example.core.sensors.GyroHardwareSpecs = com.example.core.sensors.GyroHardwareSpecs(),
     val touchMetrics: com.example.core.touch.TouchLatencyMetrics = com.example.core.touch.TouchLatencyMetrics(),
     val capabilityRegistry: List<com.example.core.adapter.CapabilityEntry> = emptyList(),
-    val sessionState: com.example.core.gameplay.ActiveSessionState = com.example.core.gameplay.ActiveSessionState()
-)
+    val sessionState: com.example.core.gameplay.ActiveSessionState = com.example.core.gameplay.ActiveSessionState(),
+    val selectedWhitelistDevice: String = "iPhone 18 Pro Max"
+) {
+    val metrics: DiagnosticMetrics get() = diagnosticMetrics
+    val thermalState: com.example.core.thermal.ThermalState get() = thermalSnapshot.thermalState
+}
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -428,6 +432,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun exportSavJson(): String {
         return app.gameConfigInspectorEngine.exportToJson()
+    }
+
+    fun addSavCustomKey(key: String, value: String) {
+        app.gameConfigInspectorEngine.addCustomKey(key, value)
+        showNotification("Added custom key: $key = $value")
+    }
+
+    fun applySavPreset(preset: String) {
+        app.gameConfigInspectorEngine.applyQuickPreset(preset)
+        showNotification("Applied UE4 Preset: $preset")
+    }
+
+    fun selectWhitelistDevice(model: String) {
+        _uiState.update { it.copy(selectedWhitelistDevice = model) }
+        showNotification("Server Whitelist active: $model (120 FPS / Hitreg locked)")
     }
 
     // Priority 6: One-Tap Game-Focus Session Manager

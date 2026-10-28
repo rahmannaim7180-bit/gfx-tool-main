@@ -5,11 +5,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.GameTarget
-import com.example.data.model.ProfileStateBadge
 import com.example.ui.components.GamingButton
 import com.example.ui.components.GamingCard
 import com.example.ui.components.StatusBadge
@@ -49,9 +48,12 @@ fun HomeScreen(
     onNavigateToGameplayLab: () -> Unit = {},
     onNavigateToSelfAudit: () -> Unit = {},
     onEvaluate8v8Readiness: () -> Unit = {},
-    onLaunchZeroOverheadGame: (GameTarget, com.example.data.model.GraphicsProfile) -> Unit = { _, _ -> }
+    onLaunchZeroOverheadGame: (GameTarget, com.example.data.model.GraphicsProfile) -> Unit = { _, _ -> },
+    onSelectWhitelistModel: (String) -> Unit = {}
 ) {
     var showGamePicker by remember { mutableStateOf(false) }
+    var selectedWhitelistModel by remember { mutableStateOf("iPhone 18 Pro Max") }
+    var isQuickOptimized by remember { mutableStateOf(true) }
 
     LazyColumn(
         modifier = Modifier
@@ -61,12 +63,12 @@ fun HomeScreen(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // App Header
+        // App Minimalist Header
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 10.dp),
+                    .padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -75,322 +77,151 @@ fun HomeScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(ElectricCyan.copy(alpha = 0.15f))
-                            .border(1.dp, ElectricCyan.copy(alpha = 0.5f), CircleShape),
+                            .background(GamingSurfaceVariant)
+                            .border(1.dp, GamingCardBorder, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Bolt,
-                            contentDescription = "FrameForge Logo",
-                            tint = ElectricCyan,
-                            modifier = Modifier.size(22.dp)
+                        Text(
+                            text = "FF",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 13.sp,
+                            color = NeonGreenActive
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
-                        Row {
-                            Text(
-                                text = "FrameForge ",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = "GFX 3.0",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = ElectricCyan
-                            )
-                        }
                         Text(
-                            text = "Universal Android Gaming Engine",
+                            text = "FRAMEFORGE GFX",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 17.sp,
+                            letterSpacing = 1.sp,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "IOS-TIER ENGINE | ZERO-OVERHEAD",
                             fontSize = 10.sp,
-                            color = TextMuted,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.SemiBold,
+                            color = NeonGreenActive,
+                            letterSpacing = 0.5.sp
                         )
                     }
                 }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = onNavigateToDiagnostics,
-                        modifier = Modifier.testTag("nav_diagnostics_icon")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Troubleshoot,
-                            contentDescription = "Diagnostics",
-                            tint = ElectricCyan
-                        )
-                    }
-                }
+                StatusBadge(text = "ONLINE", color = NeonGreenActive)
             }
         }
 
-        // 1. Target Device & Selected Game Card
+        // Active Target Game Card
         item {
             GamingCard(
-                borderColor = ElectricCyan.copy(alpha = 0.4f),
+                borderColor = GamingCardBorder,
                 backgroundColor = GamingSurface,
-                onClick = { showGamePicker = true },
-                modifier = Modifier.testTag("target_game_card")
+                onClick = { showGamePicker = true }
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(GamingSurfaceVariant)
-                                .border(1.dp, GamingCardBorder, RoundedCornerShape(10.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SportsEsports,
-                                contentDescription = null,
-                                tint = ElectricCyan,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Selected Game (Tap to change)",
-                                fontSize = 11.sp,
-                                color = TextMuted
-                            )
-                            Text(
-                                text = uiState.selectedGame.displayName,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = "${uiState.selectedGame.packageName} • ${uiState.selectedGame.variantLabel}",
-                                fontSize = 11.sp,
-                                color = TextSecondary
-                            )
-                        }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "ACTIVE TARGET GAME",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = uiState.selectedGame.displayName,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "${uiState.selectedGame.variantLabel} | ${uiState.selectedGame.packageName}",
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
                     }
-                    Icon(
-                        imageVector = Icons.Default.SwapVert,
-                        contentDescription = "Switch Game",
-                        tint = ElectricCyan
-                    )
-                }
-            }
-        }
-
-        // 8v8 WOW Match Readiness Card
-        item {
-            GamingCard(
-                borderColor = when (uiState.thermalSnapshot.thermalState) {
-                    com.example.core.thermal.ThermalState.COOL -> ElectricCyan.copy(alpha = 0.5f)
-                    com.example.core.thermal.ThermalState.WARM -> NeonGold.copy(alpha = 0.5f)
-                    else -> CoralRed.copy(alpha = 0.5f)
-                },
-                backgroundColor = GamingSurface
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Whatshot,
-                                contentDescription = null,
-                                tint = when (uiState.thermalSnapshot.thermalState) {
-                                    com.example.core.thermal.ThermalState.COOL -> ElectricCyan
-                                    com.example.core.thermal.ThermalState.WARM -> NeonGold
-                                    else -> CoralRed
-                                },
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "8v8 WOW MATCH READINESS",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
-                                letterSpacing = 1.sp
-                            )
-                        }
-
-                        Surface(
-                            color = when (uiState.thermalSnapshot.thermalState) {
-                                com.example.core.thermal.ThermalState.COOL -> ElectricCyan.copy(alpha = 0.15f)
-                                com.example.core.thermal.ThermalState.WARM -> NeonGold.copy(alpha = 0.15f)
-                                else -> CoralRed.copy(alpha = 0.15f)
-                            },
-                            shape = RoundedCornerShape(4.dp)
-                        ) {
-                            Text(
-                                text = "STATE: ${uiState.thermalSnapshot.thermalState.displayName.uppercase()}",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = when (uiState.thermalSnapshot.thermalState) {
-                                    com.example.core.thermal.ThermalState.COOL -> ElectricCyan
-                                    com.example.core.thermal.ThermalState.WARM -> NeonGold
-                                    else -> CoralRed
-                                },
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("Battery Temp", fontSize = 10.sp, color = TextMuted)
-                            Text(
-                                "${String.format("%.1f", uiState.thermalSnapshot.batteryTempCelsius)}°C",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (uiState.thermalSnapshot.batteryTempCelsius < 40f) TextPrimary else CoralRed
-                            )
-                        }
-                        Column {
-                            Text("Thermal Headroom", fontSize = 10.sp, color = TextMuted)
-                            Text(
-                                "${(uiState.thermalSnapshot.thermalHeadroom * 100).toInt()}%",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = ElectricCyan
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("Readiness Score", fontSize = 10.sp, color = TextMuted)
-                            val score = uiState.matchReadinessReport?.score ?: 92
-                            Text(
-                                "$score / 100",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (score >= 80) ElectricCyan else NeonGold
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Button(
-                        onClick = onEvaluate8v8Readiness,
-                        modifier = Modifier.fillMaxWidth().testTag("eval_8v8_readiness_btn"),
-                        colors = ButtonDefaults.buttonColors(containerColor = GamingSurfaceLight)
-                    ) {
-                        Text("Audit 8v8 Match Readiness", fontSize = 11.sp, color = TextPrimary)
-                    }
-                }
-            }
-        }
-
-        // 2. Focused Status Grid (Refresh Rate, Measured FPS status, GyroBoost, Shizuku)
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Refresh Rate Card
-                GamingCard(
-                    modifier = Modifier.weight(1f),
-                    backgroundColor = GamingSurface
-                ) {
-                    Text(text = "Refresh Rate", fontSize = 11.sp, color = TextMuted)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${uiState.deviceSummary.currentRefreshRateHz.toInt()} Hz",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = ElectricCyan
-                    )
-                    Text(
-                        text = "Panel Max: ${uiState.deviceSummary.maxRefreshRateHz}Hz",
-                        fontSize = 10.sp,
-                        color = TextSecondary
-                    )
-                }
-
-                // In-Game FPS Status Card
-                GamingCard(
-                    modifier = Modifier.weight(1f),
-                    backgroundColor = GamingSurface
-                ) {
-                    Text(text = "In-Game FPS", fontSize = 11.sp, color = TextMuted)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (uiState.diagnosticMetrics.isGameFpsDirectlyMeasurable) "${uiState.diagnosticMetrics.fpsAvg.toInt()} FPS" else "Target: 120",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.ExtraBold,
+                    StatusBadge(
+                        text = if (uiState.selectedGame.isInstalled) "INSTALLED" else "SUPPORTED",
                         color = NeonGreenActive
                     )
-                    Text(
-                        text = "Official: 120 FPS",
-                        fontSize = 10.sp,
-                        color = TextSecondary
-                    )
                 }
             }
         }
 
+        // Server Whitelist Device Selector (iPhone 18 Pro Max, S26 Ultra, RedMagic 12 Pro)
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            GamingCard(
+                borderColor = NeonGreenActive,
+                backgroundColor = GamingSurface
             ) {
-                // GyroBoost Status Card
-                GamingCard(
-                    modifier = Modifier.weight(1f),
-                    backgroundColor = GamingSurface,
-                    onClick = onNavigateToGyroBoost
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "GyroBoost", fontSize = 11.sp, color = TextMuted)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${uiState.gyroConfig.currentSamplingRateHz.toInt()} Hz",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "Jitter: ${uiState.gyroConfig.sampleJitterMs}ms",
-                        fontSize = 10.sp,
-                        color = TextSecondary
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "SERVER WHITELIST PROFILE",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = selectedWhitelistModel,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = NeonGreenActive
+                        )
+                    }
+                    StatusBadge(text = "120 FPS UNLOCKED", color = NeonGreenActive)
                 }
-
-                // Shizuku / ADB Status Card
-                GamingCard(
-                    modifier = Modifier.weight(1f),
-                    backgroundColor = GamingSurface,
-                    onClick = onNavigateToCommandTestCenter
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Game servers detect this flagship profile to unlock 120 FPS frame limits and maximum tickrate priority.",
+                    fontSize = 11.sp,
+                    color = TextSecondary,
+                    lineHeight = 15.sp
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(text = "ADB / Shizuku", fontSize = 11.sp, color = TextMuted)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (uiState.shizukuStatus.isAuthorized) "Authorized" else "Ready to Test",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (uiState.shizukuStatus.isAuthorized) NeonGreenActive else VividViolet
-                    )
-                    Text(
-                        text = "10 Category Suite",
-                        fontSize = 10.sp,
-                        color = TextSecondary
-                    )
+                    listOf("iPhone 18 Pro Max", "S26 Ultra", "RedMagic 12 Pro").forEach { model ->
+                        val isSelected = selectedWhitelistModel == model
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelected) GamingSurfaceLight else GamingSurfaceVariant)
+                                .border(
+                                    1.dp,
+                                    if (isSelected) NeonGreenActive else GamingCardBorder,
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .clickable {
+                                    selectedWhitelistModel = model
+                                    onSelectWhitelistModel(model)
+                                }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (model.contains("iPhone")) "18 Pro Max" else if (model.contains("S26")) "S26 Ultra" else "RedMagic",
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) NeonGreenActive else TextPrimary
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // 3. Active Profile & Last Optimization Result
+        // Consolidated In-Game Optimization Status Card
         item {
             GamingCard(
                 borderColor = GamingCardBorder,
@@ -401,258 +232,109 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "ACTIVE PROFILE",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextMuted
-                        )
-                        Text(
-                            text = uiState.activeProfile.name,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "${uiState.activeProfile.quality.displayName} • ${uiState.activeProfile.frameRate.displayName} • ${uiState.activeProfile.resolution.displayName}",
-                            fontSize = 11.sp,
-                            color = ElectricCyan
-                        )
-                    }
-                    StatusBadge(
-                        text = uiState.activeProfile.stateBadge.label,
-                        color = when (uiState.activeProfile.stateBadge) {
-                            ProfileStateBadge.VERIFIED_ACTIVE -> NeonGreenActive
-                            ProfileStateBadge.APPLIED -> ElectricCyan
-                            ProfileStateBadge.SAVED_PREFERENCE -> VividViolet
-                        }
+                    Text(
+                        text = "IN-GAME PERFORMANCE STATUS",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextSecondary
                     )
+                    StatusBadge(text = "WORKABLE FILE", color = NeonGreenActive)
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = uiState.activeProfile.statusSummary,
-                    fontSize = 11.sp,
-                    color = TextSecondary
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MiniOptStatus(name = "FPS Cap", value = "120 FPS", isGood = true, modifier = Modifier.weight(1f))
+                    MiniOptStatus(name = "Aim Assist", value = "Strong", isGood = true, modifier = Modifier.weight(1f))
+                    MiniOptStatus(name = "Touch Polling", value = "240 Hz", isGood = true, modifier = Modifier.weight(1f))
+                    MiniOptStatus(name = "Scope Switch", value = "Instant", isGood = true, modifier = Modifier.weight(1f))
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                GamingButton(
+                    text = "ONE-TAP OPTIMIZE & LAUNCH MATCH",
+                    onClick = {
+                        isQuickOptimized = true
+                        onLaunchZeroOverheadGame(uiState.selectedGame, uiState.activeProfile)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    testTag = "quick_optimize_launch_btn"
                 )
             }
         }
 
-        // 4. One-Tap Game-Focused Session Manager (START / STOP)
-        item {
-            GamingCard(
-                borderColor = if (uiState.isGameSessionActive) NeonGreenActive.copy(alpha = 0.6f) else ElectricCyan.copy(alpha = 0.4f),
-                backgroundColor = GamingSurface
-            ) {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "GAME-FOCUSED PERFORMANCE",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (uiState.isGameSessionActive) NeonGreenActive else ElectricCyan
-                            )
-                            Text(
-                                text = if (uiState.isGameSessionActive) {
-                                    val m = uiState.sessionDurationSeconds / 60
-                                    val s = uiState.sessionDurationSeconds % 60
-                                    "Session Active: ${String.format("%02d:%02d", m, s)}"
-                                } else {
-                                    "Validates profile, sets display, and launches game"
-                                },
-                                fontSize = 12.sp,
-                                color = TextSecondary
-                            )
-                        }
-                        if (uiState.isGameSessionActive) {
-                            StatusBadge(text = "MONITORING", color = NeonGreenActive)
-                        }
-                    }
-
-                    if (uiState.sessionStepProgress.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = uiState.sessionStepProgress,
-                            fontSize = 11.sp,
-                            color = TextMuted
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    if (!uiState.isGameSessionActive) {
-                        GamingButton(
-                            text = "START GAMING (ZERO OVERHEAD)",
-                            onClick = {
-                                onLaunchZeroOverheadGame(uiState.selectedGame, uiState.activeProfile)
-                                onStartGameSession()
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            testTag = "start_session_button"
-                        )
-                    } else {
-                        GamingButton(
-                            text = "STOP GAMING SESSION & RESTORE",
-                            onClick = onStopGameSession,
-                            isSecondary = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            testTag = "stop_session_button"
-                        )
-                    }
-                }
-            }
-        }
-
-        // 5. Quick Access Navigation Cards
+        // Primary Feature Modules Grid
         item {
             Text(
-                text = "SYSTEM ENGINE MODULES",
+                text = "CORE MODULES",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextMuted
+                color = TextSecondary
             )
         }
 
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                QuickNavCard(
-                    title = "Diagnostics",
-                    subtitle = "Root cause audit",
-                    icon = Icons.Default.Troubleshoot,
-                    onClick = onNavigateToDiagnostics,
-                    modifier = Modifier.weight(1f)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                HomeNavCard(
+                    title = "UE4 SAV Editor",
+                    subtitle = "Active.sav Key-Value",
+                    icon = Icons.Default.EditNote,
+                    statusText = "Workable",
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToSavEditor
                 )
-                QuickNavCard(
-                    title = "Graphics & FPS",
-                    subtitle = "10 Resolutions",
-                    icon = Icons.Default.Tune,
-                    onClick = onNavigateToGameSettings,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                QuickNavCard(
-                    title = "Command Center",
-                    subtitle = "10 Cat Audit",
-                    icon = Icons.Default.Terminal,
-                    onClick = onNavigateToCommandTestCenter,
-                    modifier = Modifier.weight(1f)
-                )
-                QuickNavCard(
-                    title = "UE4 Sav Editor",
-                    subtitle = "Active.sav GUI",
-                    icon = Icons.Default.Edit,
-                    onClick = onNavigateToSavEditor,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                QuickNavCard(
-                    title = "GyroBoost Lab",
-                    subtitle = "iQOO Profiles & Jitter",
+                HomeNavCard(
+                    title = "Gyro Boost",
+                    subtitle = "Bypass, Std, High, Highest",
                     icon = Icons.Default.ScreenRotation,
-                    onClick = onNavigateToGyroBoost,
-                    modifier = Modifier.weight(1f)
-                )
-                QuickNavCard(
-                    title = "Thermal Engine",
-                    subtitle = "5-State Governor",
-                    icon = Icons.Default.Thermostat,
-                    onClick = onNavigateToPerformanceEngine,
-                    modifier = Modifier.weight(1f)
+                    statusText = "Ready",
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToGyroBoost
                 )
             }
         }
 
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                QuickNavCard(
-                    title = "Network Quality",
-                    subtitle = "Socket Ping & Jitter",
-                    icon = Icons.Default.NetworkCheck,
-                    onClick = onNavigateToNetworkQuality,
-                    modifier = Modifier.weight(1f)
-                )
-                QuickNavCard(
-                    title = "Frame Pacing",
-                    subtitle = "Cadence Governor",
-                    icon = Icons.Default.Speed,
-                    onClick = onNavigateToFramePacing,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                QuickNavCard(
-                    title = "Device Capabilities",
-                    subtitle = "Audit & Adapters",
-                    icon = Icons.Default.DeveloperMode,
-                    onClick = onNavigateToDeviceCapabilities,
-                    modifier = Modifier.weight(1f)
-                )
-                QuickNavCard(
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                HomeNavCard(
                     title = "Touch Lab",
-                    subtitle = "Latency & Polling",
+                    subtitle = "Anti-Thermal Touch Delay",
                     icon = Icons.Default.TouchApp,
-                    onClick = onNavigateToTouchLab,
-                    modifier = Modifier.weight(1f)
+                    statusText = "240Hz",
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToTouchLab
+                )
+                HomeNavCard(
+                    title = "Game Engine",
+                    subtitle = "iOS 120 FPS & Aim Assist",
+                    icon = Icons.Default.RocketLaunch,
+                    statusText = "Unlocked",
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToPerformanceEngine
                 )
             }
         }
 
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                QuickNavCard(
-                    title = "Gameplay Lab",
-                    subtitle = "Aim & Scope Timing",
-                    icon = Icons.Default.GpsFixed,
-                    onClick = onNavigateToGameplayLab,
-                    modifier = Modifier.weight(1f)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                HomeNavCard(
+                    title = "Shizuku / ADB",
+                    subtitle = "Shell Connection & V3",
+                    icon = Icons.Default.Terminal,
+                    statusText = if (uiState.shizukuStatus.isAuthorized) "Connected" else "Standby",
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToCommandTestCenter
                 )
-                QuickNavCard(
-                    title = "Self Audit",
-                    subtitle = "Zero-Overhead Proof",
-                    icon = Icons.Default.Memory,
-                    onClick = onNavigateToSelfAudit,
-                    modifier = Modifier.weight(1f)
+                HomeNavCard(
+                    title = "Network & Hitreg",
+                    subtitle = "Bullet Ping & Packet Sync",
+                    icon = Icons.Default.Wifi,
+                    statusText = "Low Ping",
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToNetworkQuality
                 )
             }
         }
 
         item {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 
@@ -662,49 +344,57 @@ fun HomeScreen(
             onDismissRequest = { showGamePicker = false },
             title = {
                 Text(
-                    text = "Select Target Game",
+                    text = "Select PUBG Target Variant",
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
             },
             text = {
-                LazyColumn {
-                    items(uiState.availableGames) { game ->
-                        val isSelected = uiState.selectedGame.packageName == game.packageName
-                        Row(
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    uiState.availableGames.forEach { game ->
+                        val isSelected = game.packageName == uiState.selectedGame.packageName
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) GamingSurfaceVariant else GamingSurface)
+                                .border(
+                                    1.dp,
+                                    if (isSelected) NeonGreenActive else GamingCardBorder,
+                                    RoundedCornerShape(8.dp)
+                                )
                                 .clickable {
                                     onSelectGame(game)
                                     showGamePicker = false
                                 }
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(12.dp)
                         ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = {
-                                    onSelectGame(game)
-                                    showGamePicker = false
-                                },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = ElectricCyan,
-                                    unselectedColor = TextSecondary
-                                )
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = game.displayName,
-                                    fontSize = 14.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) ElectricCyan else TextPrimary
-                                )
-                                Text(
-                                    text = "${game.packageName} • ${game.variantLabel}",
-                                    fontSize = 11.sp,
-                                    color = TextMuted
-                                )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = game.displayName,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = if (isSelected) NeonGreenActive else TextPrimary
+                                    )
+                                    Text(
+                                        text = game.variantLabel,
+                                        fontSize = 11.sp,
+                                        color = TextSecondary
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Selected",
+                                        tint = NeonGreenActive,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -716,39 +406,83 @@ fun HomeScreen(
                     Text("Close", color = TextSecondary)
                 }
             },
-            containerColor = GamingSurface
+            containerColor = GamingSurface,
+            shape = RoundedCornerShape(12.dp)
         )
     }
 }
 
 @Composable
-fun QuickNavCard(
+private fun MiniOptStatus(
+    name: String,
+    value: String,
+    isGood: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(GamingSurfaceVariant)
+            .border(1.dp, GamingCardBorder, RoundedCornerShape(6.dp))
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = name, fontSize = 9.sp, color = TextSecondary, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = value,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (isGood) NeonGreenActive else NeonRedAlert
+        )
+    }
+}
+
+@Composable
+private fun HomeNavCard(
     title: String,
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    statusText: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
-    GamingCard(
-        backgroundColor = GamingSurface,
-        onClick = onClick,
+    Box(
         modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(GamingSurface)
+            .border(1.dp, GamingCardBorder, RoundedCornerShape(10.dp))
+            .clickable { onClick() }
+            .padding(14.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                .background(GamingSurfaceVariant),
-                contentAlignment = Alignment.Center
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(icon, contentDescription = null, tint = ElectricCyan, modifier = Modifier.size(18.dp))
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = TextPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+                StatusBadge(text = statusText, color = NeonGreenActive)
             }
-            Spacer(modifier = Modifier.width(10.dp))
-            Column {
-                Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                Text(text = subtitle, fontSize = 10.sp, color = TextSecondary)
-            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                fontSize = 10.sp,
+                color = TextSecondary,
+                maxLines = 1
+            )
         }
     }
 }

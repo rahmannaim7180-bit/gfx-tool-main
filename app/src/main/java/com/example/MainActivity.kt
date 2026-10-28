@@ -23,22 +23,16 @@ import com.example.ui.viewmodel.MainViewModel
 
 enum class AppScreen {
     HOME,
-    PERFORMANCE_DIAGNOSTICS,
-    COMMAND_TEST_CENTER,
     GAME_SETTINGS,
     SAV_EDITOR,
     GYRO_BOOST,
     PERFORMANCE_ENGINE,
     REFRESH_RATE,
-    FRAME_PACING,
     GAME_SESSION,
     NETWORK_QUALITY,
-    COMPATIBILITY_DATABASE,
-    DEVICE_CAPABILITIES,
-    TOUCH_RESPONSE_LAB,
-    GAMEPLAY_RESPONSIVENESS,
+    COMMAND_TEST_CENTER,
     POST_MATCH_REPORT,
-    SELF_AUDIT,
+    TOUCH_RESPONSE_LAB,
     SETTINGS
 }
 
@@ -73,8 +67,8 @@ fun MainAppNavHost(viewModel: MainViewModel) {
     val showBottomBar = currentScreen in listOf(
         AppScreen.HOME,
         AppScreen.GAME_SETTINGS,
-        AppScreen.PERFORMANCE_DIAGNOSTICS,
-        AppScreen.COMMAND_TEST_CENTER,
+        AppScreen.PERFORMANCE_ENGINE,
+        AppScreen.SAV_EDITOR,
         AppScreen.SETTINGS
     )
 
@@ -108,9 +102,9 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         },
                         label = { Text("Home", fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = ElectricCyan,
-                            selectedTextColor = ElectricCyan,
-                            indicatorColor = ElectricCyanContainer,
+                            selectedIconColor = NeonGreenActive,
+                            selectedTextColor = NeonGreenActive,
+                            indicatorColor = GamingSurfaceVariant,
                             unselectedIconColor = TextSecondary,
                             unselectedTextColor = TextSecondary
                         ),
@@ -128,9 +122,9 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         },
                         label = { Text("Graphics", fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = ElectricCyan,
-                            selectedTextColor = ElectricCyan,
-                            indicatorColor = ElectricCyanContainer,
+                            selectedIconColor = NeonGreenActive,
+                            selectedTextColor = NeonGreenActive,
+                            indicatorColor = GamingSurfaceVariant,
                             unselectedIconColor = TextSecondary,
                             unselectedTextColor = TextSecondary
                         ),
@@ -138,43 +132,43 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                     )
 
                     NavigationBarItem(
-                        selected = currentScreen == AppScreen.PERFORMANCE_DIAGNOSTICS,
-                        onClick = { currentScreen = AppScreen.PERFORMANCE_DIAGNOSTICS },
+                        selected = currentScreen == AppScreen.PERFORMANCE_ENGINE,
+                        onClick = { currentScreen = AppScreen.PERFORMANCE_ENGINE },
                         icon = {
                             Icon(
-                                if (currentScreen == AppScreen.PERFORMANCE_DIAGNOSTICS) Icons.Filled.Troubleshoot else Icons.Outlined.Troubleshoot,
-                                contentDescription = "Diagnostics"
+                                if (currentScreen == AppScreen.PERFORMANCE_ENGINE) Icons.Filled.RocketLaunch else Icons.Outlined.RocketLaunch,
+                                contentDescription = "Game Opt"
                             )
                         },
-                        label = { Text("Diagnostics", fontSize = 10.sp) },
+                        label = { Text("Game Opt", fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = ElectricCyan,
-                            selectedTextColor = ElectricCyan,
-                            indicatorColor = ElectricCyanContainer,
+                            selectedIconColor = NeonGreenActive,
+                            selectedTextColor = NeonGreenActive,
+                            indicatorColor = GamingSurfaceVariant,
                             unselectedIconColor = TextSecondary,
                             unselectedTextColor = TextSecondary
                         ),
-                        modifier = Modifier.testTag("nav_diagnostics")
+                        modifier = Modifier.testTag("nav_game_opt")
                     )
 
                     NavigationBarItem(
-                        selected = currentScreen == AppScreen.COMMAND_TEST_CENTER,
-                        onClick = { currentScreen = AppScreen.COMMAND_TEST_CENTER },
+                        selected = currentScreen == AppScreen.SAV_EDITOR,
+                        onClick = { currentScreen = AppScreen.SAV_EDITOR },
                         icon = {
                             Icon(
-                                if (currentScreen == AppScreen.COMMAND_TEST_CENTER) Icons.Filled.Terminal else Icons.Outlined.Terminal,
-                                contentDescription = "Audit"
+                                if (currentScreen == AppScreen.SAV_EDITOR) Icons.Filled.EditNote else Icons.Outlined.EditNote,
+                                contentDescription = "SAV Editor"
                             )
                         },
-                        label = { Text("Command Ctr", fontSize = 10.sp) },
+                        label = { Text("SAV Editor", fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = ElectricCyan,
-                            selectedTextColor = ElectricCyan,
-                            indicatorColor = ElectricCyanContainer,
+                            selectedIconColor = NeonGreenActive,
+                            selectedTextColor = NeonGreenActive,
+                            indicatorColor = GamingSurfaceVariant,
                             unselectedIconColor = TextSecondary,
                             unselectedTextColor = TextSecondary
                         ),
-                        modifier = Modifier.testTag("nav_command_center")
+                        modifier = Modifier.testTag("nav_sav_editor")
                     )
 
                     NavigationBarItem(
@@ -188,9 +182,9 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         },
                         label = { Text("Settings", fontSize = 10.sp) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = ElectricCyan,
-                            selectedTextColor = ElectricCyan,
-                            indicatorColor = ElectricCyanContainer,
+                            selectedIconColor = NeonGreenActive,
+                            selectedTextColor = NeonGreenActive,
+                            indicatorColor = GamingSurfaceVariant,
                             unselectedIconColor = TextSecondary,
                             unselectedTextColor = TextSecondary
                         ),
@@ -210,7 +204,7 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                     HomeScreen(
                         uiState = uiState,
                         onNavigateToGameSettings = { currentScreen = AppScreen.GAME_SETTINGS },
-                        onNavigateToDiagnostics = { currentScreen = AppScreen.PERFORMANCE_DIAGNOSTICS },
+                        onNavigateToDiagnostics = { currentScreen = AppScreen.PERFORMANCE_ENGINE },
                         onNavigateToCommandTestCenter = { currentScreen = AppScreen.COMMAND_TEST_CENTER },
                         onNavigateToSavEditor = { currentScreen = AppScreen.SAV_EDITOR },
                         onNavigateToGyroBoost = { currentScreen = AppScreen.GYRO_BOOST },
@@ -224,58 +218,12 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         },
                         onSelectGame = { viewModel.selectGame(it) },
                         onNavigateToNetworkQuality = { currentScreen = AppScreen.NETWORK_QUALITY },
-                        onNavigateToCompatibility = { currentScreen = AppScreen.COMPATIBILITY_DATABASE },
-                        onNavigateToDeviceCapabilities = { currentScreen = AppScreen.DEVICE_CAPABILITIES },
-                        onNavigateToFramePacing = {
-                            viewModel.evaluateFramePacing()
-                            currentScreen = AppScreen.FRAME_PACING
-                        },
                         onNavigateToTouchLab = { currentScreen = AppScreen.TOUCH_RESPONSE_LAB },
-                        onNavigateToGameplayLab = { currentScreen = AppScreen.GAMEPLAY_RESPONSIVENESS },
-                        onNavigateToSelfAudit = { currentScreen = AppScreen.SELF_AUDIT },
                         onEvaluate8v8Readiness = { viewModel.evaluate8v8MatchReadiness() },
                         onLaunchZeroOverheadGame = { game, profile ->
                             viewModel.launchGameSession(game, profile)
-                        }
-                    )
-                }
-
-                AppScreen.PERFORMANCE_DIAGNOSTICS -> {
-                    PerformanceDiagnosticsScreen(
-                        uiState = uiState,
-                        onBack = { currentScreen = AppScreen.HOME },
-                        onRefresh = { viewModel.refreshDiagnostics() },
-                        onActionClick = { actionId ->
-                            when (actionId) {
-                                "nav_sav_editor" -> currentScreen = AppScreen.SAV_EDITOR
-                                "force_144hz_shizuku" -> viewModel.setDisplayRefreshPreset("144 Hz")
-                                "force_120hz_display" -> viewModel.setDisplayRefreshPreset("120 Hz")
-                                "set_sustained_mode" -> viewModel.setPerformanceMode(com.example.data.model.PerformanceMode.SUSTAINED_COMPETITIVE)
-                                "apply_adpf_cpu_hints" -> viewModel.applyRawOptimizations()
-                                "nav_gyro_assistant" -> currentScreen = AppScreen.GYRO_BOOST
-                                "trim_shader_caches" -> viewModel.executeAdbCommand(
-                                    com.example.data.model.AdbCommand.PREDEFINED_COMMANDS.first { it.id == "clear_game_cache" }
-                                )
-                                "nav_config_inspector" -> currentScreen = AppScreen.SAV_EDITOR
-                                "nav_command_test_center" -> currentScreen = AppScreen.COMMAND_TEST_CENTER
-                                "switch_to_720p" -> {
-                                    viewModel.updateGraphicsProfile(
-                                        uiState.activeProfile.copy(resolution = com.example.data.model.ResolutionPreset.RES_1280x720)
-                                    )
-                                    viewModel.applyGraphicsProfile()
-                                }
-                            }
-                        }
-                    )
-                }
-
-                AppScreen.COMMAND_TEST_CENTER -> {
-                    CommandTestCenterScreen(
-                        uiState = uiState,
-                        onBack = { currentScreen = AppScreen.HOME },
-                        onRunSingleTest = { viewModel.runSingleCommandTest(it) },
-                        onRunAllTests = { viewModel.runAllCommandCategoryTests() },
-                        getSanitizedReport = { viewModel.getSanitizedDiagnosticReport() }
+                        },
+                        onSelectWhitelistModel = { viewModel.selectWhitelistDevice(it) }
                     )
                 }
 
@@ -301,21 +249,19 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         onUpdateGuiBrightness = { viewModel.updateSavGuiBrightness(it) },
                         onUpdateProposedValue = { keyId, value -> viewModel.updateSavProposedValue(keyId, value) },
                         onApplySavChanges = { viewModel.applySavChanges() },
-                        onExportSavJson = { viewModel.exportSavJson() }
+                        onExportSavJson = { viewModel.exportSavJson() },
+                        onAddCustomKey = { key, value -> viewModel.addSavCustomKey(key, value) },
+                        onApplyQuickPreset = { preset -> viewModel.applySavPreset(preset) }
                     )
                 }
 
                 AppScreen.GYRO_BOOST -> {
-                    GyroResponseLabScreen(
-                        specs = uiState.gyroSpecs,
-                        telemetry = uiState.gyroTelemetry,
+                    GyroBoostScreen(
+                        uiState = uiState,
                         onBack = { currentScreen = AppScreen.HOME },
-                        onStartTesting = { viewModel.startGyroLab() },
-                        onStopTesting = { viewModel.stopGyroLab() },
-                        onSelectProfile = { viewModel.selectGyroProfile(it) },
-                        onStartStationaryCalibration = { viewModel.startStationaryGyroCalibration() },
-                        onStartRotationTest = { viewModel.startRotationGyroTest() },
-                        onResetCalibration = { viewModel.resetGyroCalibration() }
+                        onToggleGyroBoost = { viewModel.toggleGyroBoost(it) },
+                        onSetGyroMode = { viewModel.setGyroMode(it) },
+                        onUpdateSensitivity = { x, y -> viewModel.updateGyroSensitivity(x, y) }
                     )
                 }
 
@@ -326,7 +272,8 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         onSelectMode = { viewModel.setPerformanceMode(it) },
                         onToggleExternalCooler = { viewModel.toggleExternalCooler(it) },
                         onApplyOptimizations = { viewModel.applyRawOptimizations() },
-                        onRestoreSettings = { viewModel.restoreAllSettings() }
+                        onRestoreSettings = { viewModel.restoreAllSettings() },
+                        onSelectWhitelistDevice = { viewModel.selectWhitelistDevice(it) }
                     )
                 }
 
@@ -336,13 +283,6 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         supportedModes = viewModel.getSupportedDisplayModes(),
                         onBack = { currentScreen = AppScreen.HOME },
                         onSetRefreshRateMode = { viewModel.setDisplayRefreshPreset(it) }
-                    )
-                }
-
-                AppScreen.FRAME_PACING -> {
-                    FramePacingScreen(
-                        uiState = uiState,
-                        onBack = { currentScreen = AppScreen.HOME }
                     )
                 }
 
@@ -366,35 +306,22 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                     )
                 }
 
-                AppScreen.COMPATIBILITY_DATABASE -> {
-                    CompatibilityDatabaseScreen(
+                AppScreen.COMMAND_TEST_CENTER -> {
+                    CommandTestCenterScreen(
+                        uiState = uiState,
                         onBack = { currentScreen = AppScreen.HOME },
-                        onCompareWithDevice = { _ ->
-                            currentScreen = AppScreen.DEVICE_CAPABILITIES
-                        }
-                    )
-                }
-
-                AppScreen.DEVICE_CAPABILITIES -> {
-                    DeviceCapabilitiesScreen(
-                        deviceSummary = uiState.deviceSummary,
-                        capabilities = uiState.capabilityRegistry,
-                        onBack = { currentScreen = AppScreen.HOME }
+                        onRunSingleTest = { viewModel.runSingleCommandTest(it) },
+                        onRunAllTests = { viewModel.runAllCommandCategoryTests() },
+                        getSanitizedReport = { viewModel.getSanitizedDiagnosticReport() }
                     )
                 }
 
                 AppScreen.TOUCH_RESPONSE_LAB -> {
                     TouchResponseLabScreen(
-                        metrics = uiState.touchMetrics,
-                        onRecordTouchEvent = { viewModel.recordTouchEvent(it) },
-                        onReset = { viewModel.resetTouchMetrics() },
-                        onBack = { currentScreen = AppScreen.HOME }
-                    )
-                }
-
-                AppScreen.GAMEPLAY_RESPONSIVENESS -> {
-                    GameplayResponsivenessScreen(
-                        onBack = { currentScreen = AppScreen.HOME }
+                        touchMetrics = uiState.touchMetrics,
+                        onBack = { currentScreen = AppScreen.HOME },
+                        onRecordTouchEvent = { _, _ -> },
+                        onResetMetrics = { viewModel.resetTouchMetrics() }
                     )
                 }
 
@@ -414,12 +341,6 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                     } ?: run {
                         currentScreen = AppScreen.HOME
                     }
-                }
-
-                AppScreen.SELF_AUDIT -> {
-                    SelfAuditScreen(
-                        onBack = { currentScreen = AppScreen.HOME }
-                    )
                 }
 
                 AppScreen.SETTINGS -> {
