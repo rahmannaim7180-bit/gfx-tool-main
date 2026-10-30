@@ -49,10 +49,9 @@ fun HomeScreen(
     onNavigateToSelfAudit: () -> Unit = {},
     onEvaluate8v8Readiness: () -> Unit = {},
     onLaunchZeroOverheadGame: (GameTarget, com.example.data.model.GraphicsProfile) -> Unit = { _, _ -> },
-    onSelectWhitelistModel: (String) -> Unit = {}
+    onApplyIqooOptimization: () -> Unit = {}
 ) {
     var showGamePicker by remember { mutableStateOf(false) }
-    var selectedWhitelistModel by remember { mutableStateOf("iPhone 18 Pro Max") }
     var isQuickOptimized by remember { mutableStateOf(true) }
 
     LazyColumn(
@@ -150,7 +149,7 @@ fun HomeScreen(
             }
         }
 
-        // Server Whitelist Device Selector (iPhone 18 Pro Max, S26 Ultra, RedMagic 12 Pro)
+        // iQOO Neo 9 (PD2338C) Dedicated Hardware Tuning Card
         item {
             GamingCard(
                 borderColor = NeonGreenActive,
@@ -163,24 +162,24 @@ fun HomeScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "SERVER WHITELIST PROFILE",
+                            text = "PRIMARY TARGET HARDWARE",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextSecondary
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = selectedWhitelistModel,
+                            text = "iQOO Neo 9 (PD2338C)",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = NeonGreenActive
                         )
                     }
-                    StatusBadge(text = "120 FPS UNLOCKED", color = NeonGreenActive)
+                    StatusBadge(text = "120 FPS / 120Hz 1:1 LOCK", color = NeonGreenActive)
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Game servers detect this flagship profile to unlock 120 FPS frame limits and maximum tickrate priority.",
+                    text = "Snapdragon 8 Gen 2 (4nm) • vivo Q1 Display Processor • 16GB LPDDR5X • OriginOS 6/7. Physical hardware integer cadence tuned for zero display micro-judder.",
                     fontSize = 11.sp,
                     color = TextSecondary,
                     lineHeight = 15.sp
@@ -190,34 +189,18 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf("iPhone 18 Pro Max", "S26 Ultra", "RedMagic 12 Pro").forEach { model ->
-                        val isSelected = selectedWhitelistModel == model
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (isSelected) GamingSurfaceLight else GamingSurfaceVariant)
-                                .border(
-                                    1.dp,
-                                    if (isSelected) NeonGreenActive else GamingCardBorder,
-                                    RoundedCornerShape(6.dp)
-                                )
-                                .clickable {
-                                    selectedWhitelistModel = model
-                                    onSelectWhitelistModel(model)
-                                }
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (model.contains("iPhone")) "18 Pro Max" else if (model.contains("S26")) "S26 Ultra" else "RedMagic",
-                                fontSize = 11.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) NeonGreenActive else TextPrimary
-                            )
-                        }
-                    }
+                    MiniOptStatus(name = "Cadence", value = "1:1 Integer", isGood = true, modifier = Modifier.weight(1f))
+                    MiniOptStatus(name = "Multi-Turbo", value = "Enabled", isGood = true, modifier = Modifier.weight(1f))
+                    MiniOptStatus(name = "Cooler Bound", value = if (uiState.rawPerformanceState.isExternalCoolerActive) "Active" else "Standby", isGood = true, modifier = Modifier.weight(1f))
+                    MiniOptStatus(name = "Touch Polling", value = "240Hz Anti-Lag", isGood = true, modifier = Modifier.weight(1f))
                 }
+                Spacer(modifier = Modifier.height(10.dp))
+                GamingButton(
+                    text = "APPLY iQOO HARDWARE TUNING",
+                    onClick = onApplyIqooOptimization,
+                    modifier = Modifier.fillMaxWidth(),
+                    testTag = "apply_iqoo_opt_btn"
+                )
             }
         }
 

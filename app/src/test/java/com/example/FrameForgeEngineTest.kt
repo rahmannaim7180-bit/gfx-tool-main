@@ -322,4 +322,71 @@ class FrameForgeEngineTest {
         assertEquals(12, report.batteryDrainPct)
         assertTrue(report.zeroOverheadVerified)
     }
+
+    @Test
+    fun testIqooNeo9DeviceDiagnosticsSpecs() {
+        val summary = com.example.core.device.DeviceSummary(
+            model = "PD2338C",
+            manufacturer = "vivo",
+            board = "kalama",
+            chipset = "Qualcomm Snapdragon 8 Gen 2",
+            androidVersion = "14",
+            customRomName = "OriginOS 6",
+            apiLevel = 34,
+            isFlagshipClass = true,
+            totalRamMb = 16384L,
+            availableRamMb = 11200L,
+            totalStorageGb = 512L,
+            availableStorageGb = 380L,
+            batteryPct = 95,
+            isCharging = false,
+            batteryTempCelsius = 34.5f,
+            thermalHeadroom = 0.95f,
+            thermalStatus = "NORMAL",
+            displayModeSummary = "120Hz 1:1 Cadence",
+            currentRefreshRateHz = 120f,
+            maxRefreshRateHz = 144,
+            supportedRefreshRates = listOf(60f, 90f, 120f, 144f),
+            isVivoOriginOsTarget = true,
+            firmwareVersion = "PD2338C_A_16.2.14.1.W10.V000L1",
+            coprocessor = "vivo Q1 Display Coprocessor"
+        )
+
+        assertEquals("PD2338C", summary.model)
+        assertEquals("PD2338C_A_16.2.14.1.W10.V000L1", summary.firmwareVersion)
+        assertEquals("vivo Q1 Display Coprocessor", summary.coprocessor)
+        assertEquals(16384L, summary.totalRamMb)
+        assertEquals(512L, summary.totalStorageGb)
+    }
+
+    @Test
+    fun testGyroModeProfilesDefinition() {
+        val modes = GyroMode.values()
+        assertEquals(4, modes.size)
+        assertTrue(modes.contains(GyroMode.RAW_PASSTHROUGH))
+        assertTrue(modes.contains(GyroMode.LIGHT_FILTER))
+        assertTrue(modes.contains(GyroMode.AGGRESSIVE_STABILIZATION))
+        assertTrue(modes.contains(GyroMode.PREDICTIVE_AIM))
+
+        assertEquals("Bypass Mode (Raw 1:1)", GyroMode.RAW_PASSTHROUGH.displayName)
+        assertEquals("Highest Profile (Pro E-Sports)", GyroMode.PREDICTIVE_AIM.displayName)
+    }
+
+    @Test
+    fun testUserSettingsStateDefaults() {
+        val state = com.example.data.preferences.UserSettingsState()
+        assertEquals(2, state.schemaVersion)
+        assertEquals("com.tencent.ig", state.selectedGamePackage)
+        assertEquals("Super Smooth", state.selectedGraphicsPreset)
+        assertEquals(120, state.preferredFps)
+        assertEquals(120, state.preferredRefreshRateHz)
+        assertEquals(PerformanceMode.RAW_PERFORMANCE, state.performanceMode)
+        assertFalse(state.isExternalCoolerActive)
+        assertEquals(GyroMode.LIGHT_FILTER, state.gyroMode)
+        assertEquals(100, state.gyroXSensitivityPercent)
+        assertEquals(100, state.gyroYSensitivityPercent)
+        assertTrue(state.antiThermalTouchEnabled)
+        assertTrue(state.zeroOverheadGamingEnabled)
+    }
 }
+

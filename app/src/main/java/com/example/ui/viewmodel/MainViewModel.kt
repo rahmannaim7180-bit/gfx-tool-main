@@ -46,7 +46,7 @@ data class UiState(
     val touchMetrics: com.example.core.touch.TouchLatencyMetrics = com.example.core.touch.TouchLatencyMetrics(),
     val capabilityRegistry: List<com.example.core.adapter.CapabilityEntry> = emptyList(),
     val sessionState: com.example.core.gameplay.ActiveSessionState = com.example.core.gameplay.ActiveSessionState(),
-    val selectedWhitelistDevice: String = "iPhone 18 Pro Max"
+    val iqooDeviceProfile: String = "iQOO Neo 9 (PD2338C)"
 ) {
     val metrics: DiagnosticMetrics get() = diagnosticMetrics
     val thermalState: com.example.core.thermal.ThermalState get() = thermalSnapshot.thermalState
@@ -185,6 +185,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
 
+        // Load permanent saved user settings
+        val savedSettings = app.preferencesRepository.settingsState.value
+        _uiState.update {
+            it.copy(
+                performanceMode = savedSettings.performanceMode,
+                rawPerformanceState = it.rawPerformanceState.copy(
+                    isExternalCoolerActive = savedSettings.isExternalCoolerActive,
+                    currentMode = savedSettings.performanceMode
+                )
+            )
+        }
+        app.performanceController.selectMode(savedSettings.performanceMode)
+        app.performanceController.setExternalCoolerActive(savedSettings.isExternalCoolerActive)
+        app.gyroBoostEngine.setGyroMode(savedSettings.gyroMode)
+        app.gyroBoostEngine.updateSensitivity(savedSettings.gyroXSensitivityPercent, savedSettings.gyroYSensitivityPercent)
+        app.framePacingTracker.updateRefreshRate(savedSettings.preferredRefreshRateHz)
+
         // Load persisted game profile
         loadPersistedProfileForGame(_uiState.value.selectedGame.packageName)
 
@@ -305,17 +322,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setPerformanceMode(mode: PerformanceMode) {
         app.performanceController.selectMode(mode)
+        app.preferencesRepository.updateSettings { it.copy(performanceMode = mode) }
         refreshDiagnostics()
+        showNotification("Performance mode: ${mode.displayName}")
     }
 
     fun toggleRawPerformanceMode(enabled: Boolean) {
         app.performanceController.setRawPerformanceEnabled(enabled)
+        val targetMode = if (enabled) PerformanceMode.RAW_PERFORMANCE else PerformanceMode.SUSTAINED_COMPETITIVE
+        app.preferencesRepository.updateSettings { it.copy(performanceMode = targetMode) }
         refreshDiagnostics()
         showNotification(if (enabled) "Raw Performance Mode active (ADPF hints enabled)" else "Switched to Sustained Competitive mode")
     }
 
     fun toggleUseAdbShizuku(use: Boolean) {
         app.performanceController.setUseAdbShizuku(use)
+        app.preferencesRepository.updateSettings { it.copy(shizukuAutoConnect = use) }
     }
 
     fun toggleApplyOnLaunch(apply: Boolean) {
@@ -324,10 +346,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleAutoRestore(restore: Boolean) {
         app.performanceController.setAutoRestore(restore)
+        app.preferencesRepository.updateSettings { it.copy(autoRestoreAfterGameExit = restore) }
     }
 
     fun toggleExternalCooler(active: Boolean) {
         app.performanceController.setExternalCoolerActive(active)
+        app.preferencesRepository.updateSettings { it.copy(isExternalCoolerActive = active) }
         refreshDiagnostics()
         showNotification(if (active) "External cooler recorded as active — thermal boundary adapted" else "External cooler inactive")
     }
@@ -369,10 +393,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Priority 7: Gyroscope & Sensitivity Assistant
     fun updateGyroSensitivity(x: Int, y: Int) {
         app.gyroBoostEngine.updateSensitivity(x, y)
+        app.preferencesRepository.updateSettings { it.copy(gyroXSensitivityPercent = x, gyroYSensitivityPercent = y) }
     }
 
     fun setGyroMode(mode: GyroMode) {
         app.gyroBoostEngine.setGyroMode(mode)
+        app.preferencesRepository.updateSettings { it.copy(gyroMode = mode) }
     }
 
     fun toggleGyroBoost(enabled: Boolean) {
@@ -444,9 +470,58 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         showNotification("Applied UE4 Preset: $preset")
     }
 
-    fun selectWhitelistDevice(model: String) {
-        _uiState.update { it.copy(selectedWhitelistDevice = model) }
-        showNotification("Server Whitelist active: $model (120 FPS / Hitreg locked)")
+    fun applyIqooOptimization() {
+        viewModelScope.launch {
+            val results = app.performanceController.applyRawOptimizations(_uiState.value.selectedGame.packageName)
+            showNotification("Applied iQOO Neo 9 (PD2338C) 120 FPS & OriginOS Multi-Turbo tuning")
+        }
+    }
+
+    fun exportSettingsJson(): String {
+        return app.preferencesRepository.exportSettingsJson()
+    }
+
+    fun importSettingsJson(json: String): Boolean {
+        val success = app.preferencesRepository.importSettingsJson(json)
+        if (success) {
+            val p = app.preferencesRepository.settingsState.value
+            _uiState.update {
+                it.copy(
+                    performanceMode = p.performanceMode,
+                    rawPerformanceState = it.rawPerformanceState.copy(
+                        isExternalCoolerActive = p.isExternalCoolerActive,
+                        currentMode = p.performanceMode
+                    )
+                )
+            }
+            app.performanceController.selectMode(p.performanceMode)
+            app.performanceController.setExternalCoolerActive(p.isExternalCoolerActive)
+            app.gyroBoostEngine.setGyroMode(p.gyroMode)
+            app.gyroBoostEngine.updateSensitivity(p.gyroXSensitivityPercent, p.gyroYSensitivityPercent)
+            showNotification("Settings imported and applied successfully")
+        } else {
+            showNotification("Failed to parse settings JSON")
+        }
+        return success
+    }
+
+    fun resetSettingsToDefault() {
+        app.preferencesRepository.resetToDefaults()
+        val p = app.preferencesRepository.settingsState.value
+        _uiState.update {
+            it.copy(
+                performanceMode = p.performanceMode,
+                rawPerformanceState = it.rawPerformanceState.copy(
+                    isExternalCoolerActive = p.isExternalCoolerActive,
+                    currentMode = p.performanceMode
+                )
+            )
+        }
+        app.performanceController.selectMode(p.performanceMode)
+        app.performanceController.setExternalCoolerActive(p.isExternalCoolerActive)
+        app.gyroBoostEngine.setGyroMode(p.gyroMode)
+        app.gyroBoostEngine.updateSensitivity(p.gyroXSensitivityPercent, p.gyroYSensitivityPercent)
+        showNotification("Settings reset to defaults (iQOO Neo 9 Raw Performance)")
     }
 
     // Priority 6: One-Tap Game-Focus Session Manager

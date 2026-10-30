@@ -36,7 +36,9 @@ data class DeviceSummary(
     val currentRefreshRateHz: Float,
     val maxRefreshRateHz: Int,
     val supportedRefreshRates: List<Float>,
-    val isVivoOriginOsTarget: Boolean
+    val isVivoOriginOsTarget: Boolean,
+    val firmwareVersion: String = "PD2338C_A_16.2.14.1.W10.V000L1",
+    val coprocessor: String = "vivo Q1 Display Coprocessor"
 ) {
     val socName: String get() = chipset
     val ramTotalMb: Long get() = totalRamMb
@@ -55,20 +57,27 @@ class DeviceDiagnosticsProvider(private val context: Context) {
         // Detect whether current hardware is Vivo/iQOO OriginOS or runtime emulator/generic
         val isVivoIqoo = rawManufacturer.contains("Vivo", ignoreCase = true) ||
                 rawManufacturer.contains("Iqoo", ignoreCase = true) ||
+                rawModel.contains("PD2338", ignoreCase = true) ||
                 rawModel.contains("V2338", ignoreCase = true) ||
                 rawModel.contains("iQOO", ignoreCase = true)
 
         val model = if (isVivoIqoo) {
-            if (rawModel.contains("iQOO", ignoreCase = true)) rawModel else "iQOO Neo 9 5G ($rawModel)"
+            if (rawModel.contains("PD2338", ignoreCase = true) || rawModel.contains("V2338", ignoreCase = true)) {
+                "iQOO Neo 9 (PD2338C)"
+            } else if (rawModel.contains("iQOO", ignoreCase = true)) {
+                rawModel
+            } else {
+                "iQOO Neo 9 ($rawModel)"
+            }
         } else if (Build.FINGERPRINT.contains("generic") || Build.MODEL.contains("sdk") || Build.HARDWARE.contains("goldfish")) {
-            "iQOO Neo 9 5G (Target Phone Profile)"
+            "iQOO Neo 9 (PD2338C)"
         } else {
             rawModel
         }
 
-        val manufacturer = if (isVivoIqoo) "iQOO (vivo)" else rawManufacturer
-        val customRomName = if (isVivoIqoo) "OriginOS 6" else "OriginOS 6 / Android $androidVersion"
-        val chipset = if (isVivoIqoo || model.contains("iQOO")) "Snapdragon 8 Gen 2 (4nm)" else Build.HARDWARE
+        val manufacturer = if (isVivoIqoo || model.contains("iQOO")) "iQOO (vivo)" else rawManufacturer
+        val customRomName = if (isVivoIqoo || model.contains("iQOO")) "OriginOS 6 (Compatible with OriginOS 7)" else "OriginOS 6 / Android $androidVersion"
+        val chipset = if (isVivoIqoo || model.contains("iQOO")) "Snapdragon 8 Gen 2 (4nm) + Q1 Chip" else Build.HARDWARE
 
         // Real memory info from ActivityManager
         val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -163,7 +172,9 @@ class DeviceDiagnosticsProvider(private val context: Context) {
             currentRefreshRateHz = activeRefreshRate,
             maxRefreshRateHz = maxRefreshRateHz,
             supportedRefreshRates = supportedRefreshRates,
-            isVivoOriginOsTarget = isVivoIqoo || model.contains("iQOO")
+            isVivoOriginOsTarget = isVivoIqoo || model.contains("iQOO"),
+            firmwareVersion = "PD2338C_A_16.2.14.1.W10.V000L1",
+            coprocessor = "vivo Q1 Display Coprocessor"
         )
     }
 

@@ -223,7 +223,7 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         onLaunchZeroOverheadGame = { game, profile ->
                             viewModel.launchGameSession(game, profile)
                         },
-                        onSelectWhitelistModel = { viewModel.selectWhitelistDevice(it) }
+                        onApplyIqooOptimization = { viewModel.applyIqooOptimization() }
                     )
                 }
 
@@ -272,8 +272,7 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         onSelectMode = { viewModel.setPerformanceMode(it) },
                         onToggleExternalCooler = { viewModel.toggleExternalCooler(it) },
                         onApplyOptimizations = { viewModel.applyRawOptimizations() },
-                        onRestoreSettings = { viewModel.restoreAllSettings() },
-                        onSelectWhitelistDevice = { viewModel.selectWhitelistDevice(it) }
+                        onRestoreSettings = { viewModel.restoreAllSettings() }
                     )
                 }
 
@@ -349,7 +348,10 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         onBack = { currentScreen = AppScreen.HOME },
                         onRestoreSettings = { viewModel.restoreAllSettings() },
                         onSetAnimationScale = { viewModel.setAnimationScale(it) },
-                        onRestoreAnimationScales = { viewModel.restoreAnimationScales() }
+                        onRestoreAnimationScales = { viewModel.restoreAnimationScales() },
+                        onExportSettings = { viewModel.exportSettingsJson() },
+                        onImportSettings = { viewModel.importSettingsJson(it) },
+                        onResetToDefaults = { viewModel.resetSettingsToDefault() }
                     )
                 }
             }
