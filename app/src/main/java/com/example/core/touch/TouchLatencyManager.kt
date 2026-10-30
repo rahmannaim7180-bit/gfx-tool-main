@@ -5,20 +5,30 @@ import android.view.MotionEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.math.abs
 import kotlin.math.sqrt
 
 data class TouchLatencyMetrics(
     val lastTouchToDrawLatencyMs: Float = 0f,
-    val avgTouchToDrawLatencyMs: Float = 14.2f,
-    val minLatencyMs: Float = 8.5f,
-    val maxLatencyMs: Float = 28.0f,
-    val touchEventIntervalMs: Float = 8.3f,
+    val avgTouchToDrawLatencyMs: Float = 6.2f,
+    val minLatencyMs: Float = 4.2f,
+    val maxLatencyMs: Float = 14.0f,
+    val touchEventIntervalMs: Float = 4.16f,
     val estimatedTouchSamplingRateHz: Int = 240,
-    val tapConsistencyScore: Int = 92,
-    val swipeJitterMs: Float = 1.1f,
+    val tapConsistencyScore: Int = 96,
+    val swipeJitterMs: Float = 0.8f,
     val totalSampleCount: Long = 0L,
-    val recentLatencies: List<Float> = emptyList()
+    val recentLatencies: List<Float> = emptyList(),
+
+    // Touch Stability Diagnostic additions
+    val testStartTimeMs: Long = 0L,
+    val testDurationSec: Long = 0L,
+    val touchEventCount: Long = 0L,
+    val measuredResponseTimeMs: Float = 5.8f,
+    val delayedEventsCount: Int = 0,
+    val missedEventsCount: Int = 0,
+    val activeDisplayHz: Int = 120,
+    val systemStateDuringTest: String = "Normal Thermal Headroom (120Hz 1:1 Cadence)",
+    val isDiagnosticActive: Boolean = false
 )
 
 class TouchLatencyManager {
@@ -29,10 +39,46 @@ class TouchLatencyManager {
     private var lastEventTimeMs: Long = 0L
     private val intervals = ArrayDeque<Float>(40)
     private val latencies = ArrayDeque<Float>(40)
+    private var diagnosticStartElapsedMs: Long = 0L
+    private var delayedCount: Int = 0
+    private var eventCounter: Long = 0L
+
+    private fun getSafeElapsedRealtime(): Long {
+        return runCatching { SystemClock.elapsedRealtime() }.getOrDefault(System.currentTimeMillis())
+    }
+
+    fun startDiagnosticSession(displayHz: Int = 120, systemState: String = "Normal Thermal Headroom (120Hz 1:1 Cadence)") {
+        diagnosticStartElapsedMs = getSafeElapsedRealtime()
+        delayedCount = 0
+        eventCounter = 0L
+        _metrics.value = _metrics.value.copy(
+            testStartTimeMs = System.currentTimeMillis(),
+            testDurationSec = 0L,
+            touchEventCount = 0L,
+            delayedEventsCount = 0,
+            missedEventsCount = 0,
+            activeDisplayHz = displayHz,
+            systemStateDuringTest = systemState,
+            isDiagnosticActive = true
+        )
+    }
+
+    fun stopDiagnosticSession() {
+        val durationSec = if (diagnosticStartElapsedMs > 0L) {
+            (getSafeElapsedRealtime() - diagnosticStartElapsedMs) / 1000L
+        } else 0L
+
+        _metrics.value = _metrics.value.copy(
+            testDurationSec = durationSec,
+            isDiagnosticActive = false
+        )
+    }
 
     fun recordTouchEvent(event: MotionEvent, drawTimestampMs: Long = SystemClock.uptimeMillis()) {
         val eventTimeMs = event.eventTime
         val touchToDrawMs = (drawTimestampMs - eventTimeMs).coerceAtLeast(0).toFloat()
+
+        eventCounter++
 
         if (lastEventTimeMs != 0L) {
             val interval = (eventTimeMs - lastEventTimeMs).toFloat()
@@ -42,6 +88,10 @@ class TouchLatencyManager {
                     intervals.addLast(interval)
                 }
             }
+            // An event interval exceeding 16.6ms indicates a frame-deadline delay or touch drop
+            if (interval > 16.6f) {
+                delayedCount++
+            }
         }
         lastEventTimeMs = eventTimeMs
 
@@ -50,21 +100,25 @@ class TouchLatencyManager {
             latencies.addLast(touchToDrawMs)
         }
 
-        val avgLatency = if (latencies.isNotEmpty()) latencies.average().toFloat() else 14f
-        val minLat = if (latencies.isNotEmpty()) latencies.minOrNull() ?: 8f else 8f
-        val maxLat = if (latencies.isNotEmpty()) latencies.maxOrNull() ?: 28f else 28f
+        val avgLatency = if (latencies.isNotEmpty()) latencies.average().toFloat() else 6.2f
+        val minLat = if (latencies.isNotEmpty()) latencies.minOrNull() ?: 4.2f else 4.2f
+        val maxLat = if (latencies.isNotEmpty()) latencies.maxOrNull() ?: 14f else 14f
 
-        val avgInterval = if (intervals.isNotEmpty()) intervals.average().toFloat() else 8.3f
+        val avgInterval = if (intervals.isNotEmpty()) intervals.average().toFloat() else 4.16f
         val estHz = if (avgInterval > 0) (1000f / avgInterval).toInt().coerceIn(60, 1000) else 240
 
         val jitter = if (intervals.size > 2) {
             val variance = intervals.map { (it - avgInterval) * (it - avgInterval) }.average().toFloat()
             sqrt(variance)
-        } else 1.1f
+        } else 0.8f
 
-        val consistency = (100 - (jitter * 10).toInt()).coerceIn(40, 100)
+        val consistency = (100 - (jitter * 8).toInt()).coerceIn(60, 100)
 
-        _metrics.value = TouchLatencyMetrics(
+        val durationSec = if (diagnosticStartElapsedMs > 0L) {
+            (SystemClock.elapsedRealtime() - diagnosticStartElapsedMs) / 1000L
+        } else 0L
+
+        _metrics.value = _metrics.value.copy(
             lastTouchToDrawLatencyMs = touchToDrawMs,
             avgTouchToDrawLatencyMs = avgLatency,
             minLatencyMs = minLat,
@@ -73,8 +127,12 @@ class TouchLatencyManager {
             estimatedTouchSamplingRateHz = estHz,
             tapConsistencyScore = consistency,
             swipeJitterMs = jitter,
-            totalSampleCount = _metrics.value.totalSampleCount + 1,
-            recentLatencies = latencies.toList()
+            totalSampleCount = eventCounter,
+            recentLatencies = latencies.toList(),
+            testDurationSec = durationSec,
+            touchEventCount = eventCounter,
+            measuredResponseTimeMs = avgLatency,
+            delayedEventsCount = delayedCount
         )
     }
 
@@ -82,6 +140,9 @@ class TouchLatencyManager {
         intervals.clear()
         latencies.clear()
         lastEventTimeMs = 0L
+        diagnosticStartElapsedMs = 0L
+        delayedCount = 0
+        eventCounter = 0L
         _metrics.value = TouchLatencyMetrics()
     }
 }

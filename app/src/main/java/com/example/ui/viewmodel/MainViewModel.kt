@@ -46,7 +46,11 @@ data class UiState(
     val touchMetrics: com.example.core.touch.TouchLatencyMetrics = com.example.core.touch.TouchLatencyMetrics(),
     val capabilityRegistry: List<com.example.core.adapter.CapabilityEntry> = emptyList(),
     val sessionState: com.example.core.gameplay.ActiveSessionState = com.example.core.gameplay.ActiveSessionState(),
-    val iqooDeviceProfile: String = "iQOO Neo 9 (PD2338C)"
+    val iqooDeviceProfile: String = "iQOO Neo 9 (PD2338C)",
+    val operatingState: com.example.core.performance.SustainedOperatingState = com.example.core.performance.SustainedOperatingState.INITIAL_PERFORMANCE,
+    val enduranceTimeline: List<com.example.core.performance.EnduranceSnapshot> = emptyList(),
+    val recoveryHistory: List<com.example.core.performance.RecoveryEvent> = emptyList(),
+    val thermalRecoveryReason: String? = null
 ) {
     val metrics: DiagnosticMetrics get() = diagnosticMetrics
     val thermalState: com.example.core.thermal.ThermalState get() = thermalSnapshot.thermalState
@@ -171,6 +175,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             app.gameSessionManager.sessionState.collect { sessState ->
                 _uiState.update { it.copy(sessionState = sessState) }
+            }
+        }
+
+        // Collect Sustained Operating State
+        viewModelScope.launch {
+            app.performanceController.operatingState.collect { opState ->
+                _uiState.update { it.copy(operatingState = opState) }
+            }
+        }
+
+        // Collect Endurance Timeline
+        viewModelScope.launch {
+            app.performanceController.enduranceTimeline.collect { timeline ->
+                _uiState.update { it.copy(enduranceTimeline = timeline) }
+            }
+        }
+
+        // Collect Recovery History
+        viewModelScope.launch {
+            app.performanceController.recoveryHistory.collect { history ->
+                _uiState.update { it.copy(recoveryHistory = history) }
+            }
+        }
+
+        // Collect Thermal Recovery Reason
+        viewModelScope.launch {
+            app.performanceController.thermalRecoveryReason.collect { reason ->
+                _uiState.update { it.copy(thermalRecoveryReason = reason) }
             }
         }
 
@@ -544,10 +576,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(sessionStepProgress = "Step 5/10: Validating applied settings via read-back...") }
             delay(200)
 
-            _uiState.update { it.copy(sessionStepProgress = "Step 6/10: Starting telemetry monitors...") }
-            app.framePacingTracker.startTracking()
-            app.gyroBoostEngine.startListening()
-            delay(200)
+            _uiState.update { it.copy(sessionStepProgress = "Step 6/10: Engaging Sustained Performance (Zero-Overhead)...") }
+            telemetryJob?.cancel()
+            app.framePacingTracker.stopTracking()
+            app.gyroBoostEngine.setGameSessionActive(true)
+            app.gyroBoostEngine.stopListening()
+            app.gyroLabManager.stopDiagnostics()
+            app.performanceController.transitionToSustained()
+            delay(100)
 
             _uiState.update { it.copy(sessionStepProgress = "Step 7/10: Launching ${game.displayName}...") }
             val pm = app.packageManager
@@ -561,7 +597,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 it.copy(
                     isGameSessionActive = true,
                     sessionDurationSeconds = 0L,
-                    sessionStepProgress = "Game-Focused Performance Active"
+                    sessionStepProgress = "Game-Focused Performance Active (Zero-Overhead)"
                 )
             }
 
@@ -580,10 +616,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun stopGameSession() {
         sessionTimerJob?.cancel()
+        app.gyroBoostEngine.setGameSessionActive(false)
         viewModelScope.launch {
             if (_uiState.value.rawPerformanceState.autoRestoreAfterGameExit) {
                 app.performanceController.restoreAllManagedSettings()
             }
+            startTelemetryPolling()
             _uiState.update {
                 it.copy(
                     isGameSessionActive = false,
@@ -735,6 +773,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         showNotification("Touch latency metrics reset")
     }
 
+    fun startTouchStabilityTest() {
+        val displayHz = _uiState.value.diagnosticMetrics.refreshRateHz
+        val thermalStatus = "Thermal: ${_uiState.value.thermalSnapshot.thermalState.displayName} (${String.format("%.1f", _uiState.value.thermalSnapshot.batteryTempCelsius)}°C) • ${displayHz}Hz 1:1 Cadence"
+        app.touchLatencyManager.startDiagnosticSession(displayHz, thermalStatus)
+        showNotification("Touch Stability Diagnostic started")
+    }
+
+    fun stopTouchStabilityTest() {
+        app.touchLatencyManager.stopDiagnosticSession()
+        showNotification("Touch Stability Diagnostic finished")
+    }
+
+    fun triggerRecoveryEvaluation(cause: com.example.core.performance.RecoveryCause) {
+        val temp = _uiState.value.thermalSnapshot.batteryTempCelsius
+        app.performanceController.triggerRecovery(
+            cause = cause,
+            detail = "Recovery triggered: ${cause.title} (Temp: ${String.format("%.1f", temp)}°C). Safe cadence prioritized."
+        )
+        showNotification("Recovery engine activated: ${cause.title}")
+    }
+
     // Zero-Overhead Game Session Launch & Teardown
     fun launchGameSession(targetGame: GameTarget, profile: GraphicsProfile) {
         viewModelScope.launch {
@@ -742,13 +801,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 targetGame = targetGame,
                 profile = profile,
                 onPauseBackgroundDiagnostics = {
-                    // Zero overhead: pause telemetry polling and frame tracking
                     telemetryJob?.cancel()
                     app.framePacingTracker.stopTracking()
+                    app.gyroBoostEngine.setGameSessionActive(true)
+                    app.gyroBoostEngine.stopListening()
+                    app.performanceController.transitionToSustained()
                 }
             )
             if (result.isSuccess) {
-                showNotification("Launching ${targetGame.displayName}. Zero-overhead mode active.")
+                showNotification("Launching ${targetGame.displayName}. Sustained zero-overhead mode active.")
             } else {
                 showNotification("Failed to launch ${targetGame.displayName}")
             }
@@ -757,10 +818,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun endCurrentGameSession() {
         viewModelScope.launch {
+            app.gyroBoostEngine.setGameSessionActive(false)
             val report = app.gameSessionManager.endSessionAndGenerateReport()
-            // Resume telemetry polling now that match has finished
+            val summary = app.diagnosticsProvider.getDeviceSummary()
+            app.performanceController.recordEnduranceProgress(
+                elapsedMinutes = (report.durationSeconds / 60).toInt().coerceAtLeast(1),
+                batteryTempCelsius = report.finalTempCelsius,
+                availableRamMb = summary.availableRamMb,
+                displayHz = 120
+            )
             startTelemetryPolling()
-            showNotification("Session finished. Match duration: ${report.durationSeconds}s")
+            showNotification("Session finished. Duration: ${report.durationSeconds}s. Post-match endurance telemetry updated.")
         }
     }
 

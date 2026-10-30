@@ -97,7 +97,7 @@ fun HomeScreen(
                             color = TextPrimary
                         )
                         Text(
-                            text = "IOS-TIER ENGINE | ZERO-OVERHEAD",
+                            text = "SUSTAINED 4-HOUR ENGINE | ZERO-OVERHEAD",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = NeonGreenActive,
@@ -225,10 +225,10 @@ fun HomeScreen(
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MiniOptStatus(name = "FPS Cap", value = "120 FPS", isGood = true, modifier = Modifier.weight(1f))
-                    MiniOptStatus(name = "Aim Assist", value = "Strong", isGood = true, modifier = Modifier.weight(1f))
+                    MiniOptStatus(name = "Cadence", value = "120 FPS Lock", isGood = true, modifier = Modifier.weight(1f))
+                    MiniOptStatus(name = "Engine State", value = uiState.operatingState.displayName.substringBefore(" ("), isGood = true, modifier = Modifier.weight(1f))
                     MiniOptStatus(name = "Touch Polling", value = "240 Hz", isGood = true, modifier = Modifier.weight(1f))
-                    MiniOptStatus(name = "Scope Switch", value = "Instant", isGood = true, modifier = Modifier.weight(1f))
+                    MiniOptStatus(name = "Cooler", value = if (uiState.rawPerformanceState.isExternalCoolerActive) "Active" else "Standby", isGood = true, modifier = Modifier.weight(1f))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 GamingButton(

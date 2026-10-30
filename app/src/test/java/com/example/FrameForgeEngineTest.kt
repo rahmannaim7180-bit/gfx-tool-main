@@ -388,5 +388,66 @@ class FrameForgeEngineTest {
         assertTrue(state.antiThermalTouchEnabled)
         assertTrue(state.zeroOverheadGamingEnabled)
     }
+
+    @Test
+    fun testThreeOperatingStatesAndTransitions() {
+        val states = com.example.core.performance.SustainedOperatingState.values()
+        assertEquals(3, states.size)
+        assertTrue(states.contains(com.example.core.performance.SustainedOperatingState.INITIAL_PERFORMANCE))
+        assertTrue(states.contains(com.example.core.performance.SustainedOperatingState.SUSTAINED_PERFORMANCE))
+        assertTrue(states.contains(com.example.core.performance.SustainedOperatingState.RECOVERY))
+
+        assertEquals("Initial Performance (Phase A)", com.example.core.performance.SustainedOperatingState.INITIAL_PERFORMANCE.displayName)
+        assertEquals("Sustained Performance (Phase B)", com.example.core.performance.SustainedOperatingState.SUSTAINED_PERFORMANCE.displayName)
+        assertEquals("Non-Disruptive Recovery (Phase C)", com.example.core.performance.SustainedOperatingState.RECOVERY.displayName)
+    }
+
+    @Test
+    fun testEnduranceSixStagesCoverage() {
+        val stages = com.example.core.performance.EnduranceStage.values()
+        assertEquals(6, stages.size)
+        assertEquals(0, stages.first().startMin)
+        assertEquals(240, stages.last().endMin)
+
+        assertTrue(stages.contains(com.example.core.performance.EnduranceStage.STAGE_1_WARMUP))
+        assertTrue(stages.contains(com.example.core.performance.EnduranceStage.STAGE_2_HEAT_ACCUMULATION))
+        assertTrue(stages.contains(com.example.core.performance.EnduranceStage.STAGE_3_MATCH_2_STEADY))
+        assertTrue(stages.contains(com.example.core.performance.EnduranceStage.STAGE_4_THERMAL_EQUILIBRIUM))
+        assertTrue(stages.contains(com.example.core.performance.EnduranceStage.STAGE_5_EXTENDED_PLAY))
+        assertTrue(stages.contains(com.example.core.performance.EnduranceStage.STAGE_6_ENDURANCE_BOUNDARY))
+    }
+
+    @Test
+    fun testRecoveryCauseAndEventHandling() {
+        val causes = com.example.core.performance.RecoveryCause.values()
+        assertEquals(4, causes.size)
+        assertTrue(causes.contains(com.example.core.performance.RecoveryCause.THERMAL_THROTTLING))
+        assertTrue(causes.contains(com.example.core.performance.RecoveryCause.MEMORY_PRESSURE))
+        assertTrue(causes.contains(com.example.core.performance.RecoveryCause.POWER_RESTRICTION))
+        assertTrue(causes.contains(com.example.core.performance.RecoveryCause.CADENCE_MISMATCH))
+
+        val event = com.example.core.performance.RecoveryEvent(
+            cause = com.example.core.performance.RecoveryCause.THERMAL_THROTTLING,
+            description = "Battery temp reached 41.8°C",
+            mitigationAction = "Bounded ADPF boost hints"
+        )
+        assertEquals("Battery temp reached 41.8°C", event.description)
+        assertEquals(com.example.core.performance.RecoveryCause.THERMAL_THROTTLING, event.cause)
+    }
+
+    @Test
+    fun testTouchStabilityDiagnosticMetrics() {
+        val manager = com.example.core.touch.TouchLatencyManager()
+        manager.startDiagnosticSession(displayHz = 120, systemState = "Normal")
+
+        val activeMetrics = manager.metrics.value
+        assertTrue(activeMetrics.isDiagnosticActive)
+        assertEquals(120, activeMetrics.activeDisplayHz)
+        assertEquals("Normal", activeMetrics.systemStateDuringTest)
+
+        manager.stopDiagnosticSession()
+        val stoppedMetrics = manager.metrics.value
+        assertFalse(stoppedMetrics.isDiagnosticActive)
+    }
 }
 

@@ -15,8 +15,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -53,7 +55,9 @@ fun TouchResponseLabScreen(
     touchMetrics: TouchLatencyMetrics,
     onBack: () -> Unit,
     onRecordTouchEvent: (Float, Long) -> Unit,
-    onResetMetrics: () -> Unit
+    onResetMetrics: () -> Unit,
+    onStartStabilityTest: () -> Unit = {},
+    onStopStabilityTest: () -> Unit = {}
 ) {
     var selectedMode by remember { mutableStateOf(TouchTestMode.SWIPE_TEST) }
     var touchPoints by remember { mutableStateOf<List<Offset>>(emptyList()) }
@@ -82,7 +86,7 @@ fun TouchResponseLabScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Touch Response Lab",
+                            text = "Touch Response & Stability Lab",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
@@ -168,6 +172,128 @@ fun TouchResponseLabScreen(
                         color = TextSecondary,
                         lineHeight = 15.sp
                     )
+                }
+            }
+
+            // Section 4: Touch Stability Diagnostic Card
+            item {
+                GamingCard(
+                    borderColor = if (touchMetrics.isDiagnosticActive) NeonGreenActive else GamingCardBorder,
+                    backgroundColor = GamingSurface
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "TOUCH STABILITY DIAGNOSTIC",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = if (touchMetrics.isDiagnosticActive) "RUNNING: ${touchMetrics.testDurationSec}s elapsed" else "STANDBY (Tap Start to benchmark)",
+                                fontSize = 10.sp,
+                                color = if (touchMetrics.isDiagnosticActive) NeonGreenActive else TextSecondary
+                            )
+                        }
+                        StatusBadge(
+                            text = if (touchMetrics.isDiagnosticActive) "ACTIVE" else "IDLE",
+                            color = if (touchMetrics.isDiagnosticActive) NeonGreenActive else TextSecondary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        DiagnosticParamPill(
+                            name = "Events",
+                            value = "${touchMetrics.touchEventCount}",
+                            modifier = Modifier.weight(1f)
+                        )
+                        DiagnosticParamPill(
+                            name = "App Latency",
+                            value = "${String.format("%.1f", touchMetrics.measuredResponseTimeMs)}ms",
+                            modifier = Modifier.weight(1f)
+                        )
+                        DiagnosticParamPill(
+                            name = "Delayed (>16ms)",
+                            value = "${touchMetrics.delayedEventsCount}",
+                            modifier = Modifier.weight(1f),
+                            isError = touchMetrics.delayedEventsCount > 0
+                        )
+                        DiagnosticParamPill(
+                            name = "Display Hz",
+                            value = "${touchMetrics.activeDisplayHz}Hz",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "System State: ${touchMetrics.systemStateDuringTest}",
+                        fontSize = 10.sp,
+                        color = TextSecondary
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(GamingSurfaceVariant)
+                            .padding(8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.Top) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = TextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "IMPORTANT: This diagnostic measures internal touch-to-dispatch latency within FrameForge. It cannot and does not claim to measure PUBG Mobile's complete photon-to-pixel latency. FrameForge does NOT inject artificial touch inputs into PUBG or manipulate protected game inputs.",
+                                fontSize = 9.sp,
+                                color = TextSecondary,
+                                lineHeight = 13.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (!touchMetrics.isDiagnosticActive) {
+                            Button(
+                                onClick = onStartStabilityTest,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonGreenActive),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = GamingDarkBackground, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("START STABILITY DIAGNOSTIC", fontWeight = FontWeight.Bold, color = GamingDarkBackground, fontSize = 11.sp)
+                            }
+                        } else {
+                            Button(
+                                onClick = onStopStabilityTest,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonRedAlert),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.Stop, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("STOP STABILITY DIAGNOSTIC", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 11.sp)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -529,6 +655,33 @@ fun TouchResponseLabScreen(
             item {
                 Spacer(modifier = Modifier.height(14.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun DiagnosticParamPill(
+    name: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    isError: Boolean = false
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(GamingSurfaceVariant)
+            .border(1.dp, if (isError) NeonRedAlert else GamingCardBorder, RoundedCornerShape(6.dp))
+            .padding(vertical = 6.dp, horizontal = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = name, fontSize = 9.sp, color = TextSecondary)
+            Text(
+                text = value,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isError) NeonRedAlert else TextPrimary
+            )
         }
     }
 }

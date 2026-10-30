@@ -272,7 +272,8 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         onSelectMode = { viewModel.setPerformanceMode(it) },
                         onToggleExternalCooler = { viewModel.toggleExternalCooler(it) },
                         onApplyOptimizations = { viewModel.applyRawOptimizations() },
-                        onRestoreSettings = { viewModel.restoreAllSettings() }
+                        onRestoreSettings = { viewModel.restoreAllSettings() },
+                        onTriggerRecovery = { viewModel.triggerRecoveryEvaluation(it) }
                     )
                 }
 
@@ -320,7 +321,9 @@ fun MainAppNavHost(viewModel: MainViewModel) {
                         touchMetrics = uiState.touchMetrics,
                         onBack = { currentScreen = AppScreen.HOME },
                         onRecordTouchEvent = { _, _ -> },
-                        onResetMetrics = { viewModel.resetTouchMetrics() }
+                        onResetMetrics = { viewModel.resetTouchMetrics() },
+                        onStartStabilityTest = { viewModel.startTouchStabilityTest() },
+                        onStopStabilityTest = { viewModel.stopTouchStabilityTest() }
                     )
                 }
 

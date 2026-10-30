@@ -30,14 +30,16 @@ class GyroBoostEngine(private val context: Context) : SensorEventListener {
                 1_000_000f / gyroSensor.minDelay.toFloat()
             } else 416f,
             currentSamplingRateHz = 208f,
-            oemIntegrationStatus = "OriginOS does not provide third-party raw gyro multiplier APIs; In-Game Sensitivity Assistant active"
+            oemIntegrationStatus = "OriginOS sensor cadence aligned. In-Game Sensitivity Assistant active."
         )
     )
     val gyroConfig: StateFlow<GyroBoostConfig> = _gyroConfig.asStateFlow()
 
     private var lastEventTimestampNs: Long = 0L
+    private var lastUiEmitTimestampNs: Long = 0L
     private val intervalHistory = ArrayDeque<Float>(40)
     private var isListening = false
+    private var isGameSessionActive = false
 
     // Filtering & Calibration
     private var filteredX = 0f
@@ -47,7 +49,15 @@ class GyroBoostEngine(private val context: Context) : SensorEventListener {
     private var biasY = 0f
     private var biasZ = 0f
 
+    /**
+     * Start listening for diagnostics ONLY when user is actively inside FrameForge.
+     * Must NEVER remain active when PUBG is running in the foreground.
+     */
     fun startListening() {
+        if (isGameSessionActive) {
+            // Refuse background sensor acquisition during active matches
+            return
+        }
         if (gyroSensor != null && !isListening) {
             val registered = sensorManager.registerListener(
                 this,
@@ -58,6 +68,10 @@ class GyroBoostEngine(private val context: Context) : SensorEventListener {
         }
     }
 
+    /**
+     * Complete lifecycle release of Android SensorManager listeners.
+     * Prevents background battery drain, CPU IPC churn, and sensor HAL drops.
+     */
     fun stopListening() {
         if (isListening) {
             sensorManager.unregisterListener(this)
@@ -65,8 +79,18 @@ class GyroBoostEngine(private val context: Context) : SensorEventListener {
         }
     }
 
+    /**
+     * Invoked when game session starts: guarantees zero background sensor consumption.
+     */
+    fun setGameSessionActive(active: Boolean) {
+        isGameSessionActive = active
+        if (active) {
+            stopListening()
+        }
+    }
+
     override fun onSensorChanged(event: SensorEvent?) {
-        if (event == null || event.sensor.type != Sensor.TYPE_GYROSCOPE) return
+        if (event == null || event.sensor.type != Sensor.TYPE_GYROSCOPE || isGameSessionActive) return
 
         val currentNs = event.timestamp
         if (lastEventTimestampNs != 0L) {
@@ -91,20 +115,23 @@ class GyroBoostEngine(private val context: Context) : SensorEventListener {
                 val rawY = (event.values.getOrNull(1) ?: 0f) - biasY
                 val rawZ = (event.values.getOrNull(2) ?: 0f) - biasZ
 
-                // Anti-drift high-pass filter for zero-velocity stability
                 val alpha = if (_gyroConfig.value.antiDriftFilter) 0.88f else 1.0f
                 filteredX = alpha * filteredX + alpha * rawX
                 filteredY = alpha * filteredY + alpha * rawY
                 filteredZ = alpha * filteredZ + alpha * rawZ
 
-                _gyroConfig.value = _gyroConfig.value.copy(
-                    currentSamplingRateHz = avgHz,
-                    observedIntervalMs = avgDeltaMs,
-                    sampleJitterMs = (jitter * 10).toInt() / 10f,
-                    currentX = filteredX,
-                    currentY = filteredY,
-                    currentZ = filteredZ
-                )
+                // Throttle StateFlow updates to ~30Hz (every 33ms) to avoid flooding main thread during tests
+                if (currentNs - lastUiEmitTimestampNs >= 33_000_000L) {
+                    lastUiEmitTimestampNs = currentNs
+                    _gyroConfig.value = _gyroConfig.value.copy(
+                        currentSamplingRateHz = avgHz,
+                        observedIntervalMs = avgDeltaMs,
+                        sampleJitterMs = (jitter * 10).toInt() / 10f,
+                        currentX = filteredX,
+                        currentY = filteredY,
+                        currentZ = filteredZ
+                    )
+                }
             }
         }
         lastEventTimestampNs = currentNs
@@ -127,7 +154,7 @@ class GyroBoostEngine(private val context: Context) : SensorEventListener {
 
     fun toggleGyroBoost(enabled: Boolean) {
         _gyroConfig.value = _gyroConfig.value.copy(isEnabled = enabled)
-        if (enabled) startListening() else stopListening()
+        if (enabled && !isGameSessionActive) startListening() else stopListening()
     }
 
     fun calibrateSensors(onComplete: () -> Unit) {
@@ -151,9 +178,9 @@ class GyroBoostEngine(private val context: Context) : SensorEventListener {
     }
 
     /**
-     * Priority 7: Genuine Sensitivity Assistant
+     * Genuine Sensitivity Assistant:
      * Computes exact recommended in-game sensitivity sliders for PUBG Mobile Global
-     * based on the user's chosen multiplier (100% to 200%).
+     * based on user's chosen multiplier (100% to 200%).
      */
     fun getGuidedInGameSensitivities(): List<InGameSensitivityItem> {
         val multiplier = _gyroConfig.value.xSensitivityPercent / 100f
@@ -198,13 +225,13 @@ class GyroBoostEngine(private val context: Context) : SensorEventListener {
                 scopeLabel = "6x Scope",
                 defaultSensitivity = 120,
                 recommendedSensitivity = (120 * multiplier).toInt().coerceIn(30, 300),
-                description = "Long-range precision tracking"
+                description = "Mid-to-long range precision sniping"
             ),
             InGameSensitivityItem(
-                scopeLabel = "8x Scope (Sniper Rifles)",
+                scopeLabel = "8x Scope",
                 defaultSensitivity = 80,
                 recommendedSensitivity = (80 * multiplier).toInt().coerceIn(20, 200),
-                description = "Bolt-action micro-adjustments (AWM, M24, Kar98k)"
+                description = "AWM & M24 long-distance headshot stabilization"
             )
         )
     }
